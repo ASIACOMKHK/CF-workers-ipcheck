@@ -1,221 +1,34 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>终端 - 双栈 IP 诊断系统</title>
-    <style>
-        :root {
-            --bg-color: #0a0b0d;
-            --accent-color: #00e676;
-            --text-color: #d1d1d1;
-            --grid-color: rgba(0, 230, 118, 0.05);
-        }
-        body {
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            font-family: 'Consolas', 'Monaco', 'PingFang SC', 'Microsoft YaHei', monospace;
-            margin: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            overflow-x: hidden;
-        }
-        body::before {
-            content: "";
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background-image: linear-gradient(var(--grid-color) 1px, transparent 1px),
-                              linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
-            background-size: 30px 30px;
-            z-index: -1;
-        }
-        .terminal {
-            width: 95%;
-            max-width: 800px;
-            background: rgba(16, 18, 22, 0.95);
-            border: 1px solid var(--accent-color);
-            box-shadow: 0 0 30px rgba(0, 230, 118, 0.15);
-            padding: 30px;
-            position: relative;
-            box-sizing: border-box;
-        }
-        .header {
-            border-bottom: 1px solid var(--accent-color);
-            padding-bottom: 10px;
-            margin-bottom: 25px;
-            display: flex;
-            justify-content: space-between;
-            font-size: 0.75rem;
-            color: var(--accent-color);
-            letter-spacing: 1px;
-        }
-        .ip-row { margin-bottom: 20px; }
-        .ip-large {
-            font-size: clamp(1.1rem, 4.5vw, 2.2rem);
-            font-weight: bold;
-            color: var(--accent-color);
-            text-shadow: 0 0 10px rgba(0, 230, 118, 0.3);
-            word-break: break-all;
-            min-height: 1.2em;
-        }
-        .data-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            border-top: 1px solid #333;
-            padding-top: 20px;
-        }
-        @media (max-width: 600px) { .data-grid { grid-template-columns: 1fr; } }
-        .label { color: #888; font-size: 0.7rem; text-transform: uppercase; margin-bottom: 6px; }
-        .value { color: #fff; margin-bottom: 18px; font-size: 0.95rem; border-left: 2px solid var(--accent-color); padding-left: 10px; }
-        .status-bar {
-            margin-top: 30px;
-            font-size: 0.7rem;
-            background: rgba(0, 230, 118, 0.08);
-            padding: 12px 15px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .ua-text {
-            max-width: 70%;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            opacity: 0.7;
-        }
-        .scan-line {
-            width: 100%;
-            height: 2px;
-            background: rgba(0, 230, 118, 0.05);
-            position: absolute;
-            top: 0; left: 0;
-            animation: scan 6s linear infinite;
-            pointer-events: none;
-        }
-        @keyframes scan {
-            0% { top: 0; }
-            100% { top: 100%; }
-        }
-    </style>
-</head>
-<body>
-    <div class="terminal">
-        <div class="scan-line"></div>
-        <div class="header">
-            <span id="ui-status">SYSTEM STATUS: OPERATIONAL</span>
-            <span id="ui-node">NODE: CLIENT_DETECTOR</span>
-        </div>
-        <div class="ip-section">
-            <div class="ip-row">
-                <div class="label" id="ui-v4-label">IPv4 ADDRESS</div>
-                <div id="ipv4" class="ip-large">Detecting...</div>
-            </div>
-            <div class="ip-row">
-                <div class="label" id="ui-v6-label">IPv6 ADDRESS</div>
-                <div id="ipv6" class="ip-large">Detecting...</div>
-            </div>
-        </div>
-        <div class="data-grid">
-            <div class="col">
-                <div class="label" id="ui-geo-label">GEOLOCATION</div>
-                <div id="val-geo" class="value">Loading...</div>
-                <div class="label" id="ui-isp-label">ISP / ORGANIZATION</div>
-                <div id="val-isp" class="value">Loading...</div>
-            </div>
-            <div class="col">
-                <div class="label">BROWSER / OS</div>
-                <div id="val-browser" class="value">Detecting...</div>
-                <div class="label" id="ui-conn-label">CONNECTION STATUS</div>
-                <div id="val-conn" class="value" style="color: #00e676; font-weight: bold;">ENCRYPTED</div>
-            </div>
-        </div>
-        <div class="status-bar">
-            <span class="ua-text" id="val-ua">UA: Loading...</span>
-            <span id="ui-live" style="color: #00e676; font-weight: bold; border: 1px solid #00e676; padding: 2px 5px;">LIVE_TRACE</span>
-        </div>
-    </div>
+name: Deploy to GitHub Pages
 
-    <script>
-        const i18n = {
-            'zh-CN': {
-                status: '系统状态: 正常运行',
-                v4: 'IPv4 地址', v6: 'IPv6 地址',
-                geo: '地理位置', isp: '网络服务供应商',
-                conn: '连接状态', secured: '安全加密连接',
-                live: '实时追踪', loading: '正在检测...',
-                noSupport: '未检测到 / 不支持'
-            },
-            'zh-TW': {
-                status: '系統狀態: 正常運行',
-                v4: 'IPv4 地址', v6: 'IPv6 地址',
-                geo: '地理位置', isp: '網絡服務供應商',
-                conn: '連線狀態', secured: '安全加密連線',
-                live: '實時追蹤', loading: '正在檢測...',
-                noSupport: '未檢測到 / 不支持'
-            },
-            'en': {
-                status: 'SYSTEM STATUS: OPERATIONAL',
-                v4: 'IPv4 ADDRESS', v6: 'IPv6 ADDRESS',
-                geo: 'GEOLOCATION', isp: 'ISP / ORGANIZATION',
-                conn: 'CONNECTION STATUS', secured: 'ENCRYPTED',
-                live: 'LIVE_TRACE', loading: 'Detecting...',
-                noSupport: 'Not Detected'
-            }
-        };
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
 
-        const userLang = navigator.language.startsWith('zh-CN') ? 'zh-CN' : 
-                         navigator.language.startsWith('zh') ? 'zh-TW' : 'en';
-        const t = i18n[userLang];
+permissions:
+  contents: read
+  pages: write
+  id-token: write
 
-        document.getElementById('ui-status').innerText = t.status;
-        document.getElementById('ui-v4-label').innerText = t.v4;
-        document.getElementById('ui-v6-label').innerText = t.v6;
-        document.getElementById('ui-geo-label').innerText = t.geo;
-        document.getElementById('ui-isp-label').innerText = t.isp;
-        document.getElementById('ui-conn-label').innerText = t.conn;
-        document.getElementById('val-conn').innerText = t.secured;
-        document.getElementById('ui-live').innerText = t.live;
-        document.getElementById('val-ua').innerText = 'UA: ' + navigator.userAgent;
+concurrency:
+  group: pages
+  cancel-in-progress: false
 
-        async function fetchIP(version) {
-            const el = document.getElementById('ipv' + version);
-            const url = version === '4' 
-                ? 'https://api.ipify.org?format=json' 
-                : 'https://api6.ipify.org?format=json';
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
-            try {
-                const resp = await fetch(url);
-                const data = await resp.json();
-                el.innerText = data.ip;
-                el.style.color = '#00e676';
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
 
-                if (version === '4') {
-                    fetchDetails(data.ip);
-                }
-            } catch (e) {
-                el.innerText = t.noSupport;
-                el.style.color = '#555';
-            }
-        }
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
 
-        async function fetchDetails(ip) {
-            try {
-                const resp = await fetch(`https://ipapi.co/${ip}/json/`);
-                const data = await resp.json();
-                document.getElementById('val-geo').innerText = `${data.city || ''}, ${data.region || ''}, ${data.country_name || ''}`.replace(/^, |, $/g, '');
-                document.getElementById('val-isp').innerText = data.org || 'Unknown';
-                document.getElementById('val-browser').innerText = navigator.platform;
-            } catch (e) {
-                document.getElementById('val-geo').innerText = 'Unknown';
-                document.getElementById('val-isp').innerText = 'Unknown';
-            }
-        }
-
-        fetchIP('4');
-        fetchIP('6');
-    </script>
-</body>
-</html>
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
