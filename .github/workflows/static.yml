@@ -14,7 +14,7 @@
         body {
             background-color: var(--bg-color);
             color: var(--text-color);
-            font-family: 'Consolas', 'Monaco', 'PingFang SC', 'Microsoft YaHei', 'PingFang TC', 'Microsoft JhengHei', monospace;
+            font-family: 'Consolas', 'Monaco', 'PingFang SC', 'Microsoft YaHei', monospace;
             margin: 0;
             display: flex;
             justify-content: center;
@@ -22,7 +22,6 @@
             min-height: 100vh;
             overflow-x: hidden;
         }
-        /* 網格背景 */
         body::before {
             content: "";
             position: fixed;
@@ -109,7 +108,6 @@
             <span id="ui-status">SYSTEM STATUS: OPERATIONAL</span>
             <span id="ui-node">NODE: CLIENT_DETECTOR</span>
         </div>
-
         <div class="ip-section">
             <div class="ip-row">
                 <div class="label" id="ui-v4-label">IPv4 ADDRESS</div>
@@ -120,33 +118,27 @@
                 <div id="ipv6" class="ip-large">Detecting...</div>
             </div>
         </div>
-
         <div class="data-grid">
             <div class="col">
                 <div class="label" id="ui-geo-label">GEOLOCATION</div>
                 <div id="val-geo" class="value">Loading...</div>
-                
                 <div class="label" id="ui-isp-label">ISP / ORGANIZATION</div>
                 <div id="val-isp" class="value">Loading...</div>
             </div>
-            
             <div class="col">
                 <div class="label">BROWSER / OS</div>
                 <div id="val-browser" class="value">Detecting...</div>
-
                 <div class="label" id="ui-conn-label">CONNECTION STATUS</div>
-                <div id="val-conn" class="value" style="color: var(--accent-color); font-weight: bold;">ENCRYPTED</div>
+                <div id="val-conn" class="value" style="color: #00e676; font-weight: bold;">ENCRYPTED</div>
             </div>
         </div>
-
         <div class="status-bar">
             <span class="ua-text" id="val-ua">UA: Loading...</span>
-            <span id="ui-live" style="color: var(--accent-color); font-weight: bold; border: 1px solid var(--accent-color); padding: 2px 5px;">LIVE_TRACE</span>
+            <span id="ui-live" style="color: #00e676; font-weight: bold; border: 1px solid #00e676; padding: 2px 5px;">LIVE_TRACE</span>
         </div>
     </div>
 
     <script>
-        // 多語言配置
         const i18n = {
             'zh-CN': {
                 status: '系统状态: 正常运行',
@@ -174,11 +166,10 @@
             }
         };
 
-        // 自動檢測語言
-        const userLang = navigator.language.includes('zh-CN') ? 'zh-CN' : (navigator.language.includes('zh') ? 'zh-TW' : 'en');
+        const userLang = navigator.language.startsWith('zh-CN') ? 'zh-CN' : 
+                         navigator.language.startsWith('zh') ? 'zh-TW' : 'en';
         const t = i18n[userLang];
 
-        // 初始化界面文字
         document.getElementById('ui-status').innerText = t.status;
         document.getElementById('ui-v4-label').innerText = t.v4;
         document.getElementById('ui-v6-label').innerText = t.v6;
@@ -190,20 +181,23 @@
         document.getElementById('val-ua').innerText = 'UA: ' + navigator.userAgent;
 
         async function fetchIP(version) {
-            const el = document.getElementById('ip' + version);
-            const url = version === 'v4' ? 'https://api4.ipify.org?format=json' : 'https://api6.ipify.org?format=json';
-            
+            const el = document.getElementById('ipv' + version);
+            const url = version === '4' 
+                ? 'https://api.ipify.org?format=json' 
+                : 'https://api6.ipify.org?format=json';
+
             try {
                 const resp = await fetch(url);
                 const data = await resp.json();
                 el.innerText = data.ip;
-                el.style.color = 'var(--accent-color)';
-                
-                // 獲取詳情 (僅使用 v4 請求一次地理位置)
-                if(version === 'v4') fetchDetails(data.ip);
+                el.style.color = '#00e676';
+
+                if (version === '4') {
+                    fetchDetails(data.ip);
+                }
             } catch (e) {
                 el.innerText = t.noSupport;
-                el.style.color = "#555";
+                el.style.color = '#555';
             }
         }
 
@@ -211,16 +205,17 @@
             try {
                 const resp = await fetch(`https://ipapi.co/${ip}/json/`);
                 const data = await resp.json();
-                document.getElementById('val-geo').innerText = `${data.city}, ${data.region}, ${data.country_name}`;
-                document.getElementById('val-isp').innerText = `${data.org} (AS${data.asn})`;
+                document.getElementById('val-geo').innerText = `${data.city || ''}, ${data.region || ''}, ${data.country_name || ''}`.replace(/^, |, $/g, '');
+                document.getElementById('val-isp').innerText = data.org || 'Unknown';
                 document.getElementById('val-browser').innerText = navigator.platform;
             } catch (e) {
                 document.getElementById('val-geo').innerText = 'Unknown';
+                document.getElementById('val-isp').innerText = 'Unknown';
             }
         }
 
-        fetchIP('v4');
-        fetchIP('v6');
+        fetchIP('4');
+        fetchIP('6');
     </script>
 </body>
 </html>
