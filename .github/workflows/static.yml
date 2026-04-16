@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>终端 - 双栈 IP 诊断系统</title>
     <style>
-        :root {
+        :root  {
             --bg-color: #0a0b0d;
             --accent-color: #00e676;
             --text-color: #d1d1d1;
