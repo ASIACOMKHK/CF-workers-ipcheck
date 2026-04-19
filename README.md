@@ -1,57 +1,94 @@
-CF-workers-ipcheck
-一个基于 Cloudflare Workers 构建的轻量级、无服务器 IP 地址检测与归属地查询工具，支持 IPv4/IPv6 双栈，全球低延迟访问，一键部署即可使用。
-✨ 核心特性
-🌐 双栈兼容：完美支持 IPv4 / IPv6 地址检测，自动识别访客网络类型
-🚀 无服务器架构：依托 Cloudflare 全球边缘节点，无需自建服务器，部署即上线
-⚡ 极速响应：毫秒级返回 IP 与归属地信息，全球访问低延迟
-📍 精准地理信息：自动解析 IP 对应的国家 / 地区 / 城市、运营商与数据中心信息
-🎨 美观响应式界面：自带深色 / 浅色模式切换，适配桌面 / 移动端访问
-🔧 多格式输出：支持网页展示、纯文本、JSON 接口三种返回格式，适配脚本调用
-🛡️ 轻量无依赖：核心代码仅百余行，无外部依赖，部署零负担
-🚀 一键部署
-方式一：直接在 Cloudflare 控制台部署（推荐新手）
-登录你的 Cloudflare 控制台
-进入左侧菜单的 Workers & Pages，点击 创建 Worker
-给你的 Worker 起个名字，点击 部署
-点击 编辑代码，把下面的 _workers.js 完整代码粘贴进去
-点击右上角 保存并部署，访问你的 Worker 域名即可使用
-方式二：使用 Wrangler CLI 部署（适合开发者）
-bash
-运行
-# 1. 克隆仓库
+下面是**整套完整文件内容**，你直接新建对应文件复制进去即可上传 GitHub：
+
+---
+
+# 1. `README.md`
+```markdown
+# CF-workers-ipcheck
+![GitHub](https://img.shields.io/github/license/ASIACOMKHK/CF-workers-ipcheck)
+![Cloudflare Workers](https://img.shields.io/badge/Cloudflare-Workers-F38020)
+![IPv4/IPv6](https://img.shields.io/badge/IP-IPv4%2FIPv6-blue)
+![Language](https://img.shields.io/badge/Language-JavaScript-yellow)
+
+基于 Cloudflare Workers 构建的轻量级 IP 信息查询工具，支持 IPv4/IPv6 双栈，自带网页展示与多格式 API 接口，一键部署、全球节点加速。
+
+## ✨ 功能特性
+- 自动获取访客真实出口 IP（IPv4 / IPv6 自动识别）
+- 显示国家、地区、城市、时区、Cloudflare 节点
+- 响应式网页界面，自动适配深色/浅色模式
+- 提供网页、纯文本、JSON 三种访问格式
+- 零依赖、无服务器、部署即用
+- 全球边缘节点响应，延迟极低
+
+## 🖼️ 演示截图
+![演示截图](https://raw.githubusercontent.com/ASIACOMKHK/CF-workers-ipcheck/main/screenshot.png)
+
+## 🚀 快速部署
+
+### 方式 1：Cloudflare 控制台部署（推荐）
+1. 登录 [Cloudflare Dashboard](https://dash.cloudflare.com)
+2. 进入 Workers & Pages → 创建应用 → 创建 Worker
+3. 将 `_workers.js` 代码全部粘贴
+4. 保存并部署
+
+### 方式 2：Wrangler CLI 部署
+```bash
 git clone https://github.com/ASIACOMKHK/CF-workers-ipcheck.git
 cd CF-workers-ipcheck
-
-# 2. 安装依赖
 npm install
-
-# 3. 本地调试（可选）
-npm run dev
-
-# 4. 一键部署到 Cloudflare Workers
 npm run deploy
-📖 使用说明
-1. 网页端访问
-直接打开你的 Workers 域名（如 https://ipcheck.yourname.workers.dev），即可自动查看你的：
-公网 IP 地址（IPv4/IPv6）
-IP 归属地（国家 / 地区 / 城市）
-Cloudflare 数据中心节点
-访问时间戳
-2. API 调用
-支持多种格式的接口调用，方便脚本 / 程序集成：
-bash
-运行
-# 纯文本格式（默认）
-curl https://ipcheck.yourname.workers.dev
+```
 
-# JSON 格式
-curl https://ipcheck.yourname.workers.dev/json
+## 📡 接口说明
+- `/`          网页展示 IP 信息
+- `/ip`        仅返回 IP 地址（纯文本）
+- `/json`      返回完整 JSON 信息
 
-# 仅获取 IP 地址
-curl https://ipcheck.yourname.workers.dev/ip
-📝 完整 _workers.js 代码
-javascript
-运行
+调用示例：
+```bash
+curl https://your-worker.workers.dev/json
+```
+
+## 📁 项目结构
+```
+CF-workers-ipcheck/
+├── _workers.js       # Workers 主脚本
+├── README.md         # 项目说明
+├── wrangler.toml     # Wrangler 配置
+├── LICENSE           # 开源协议
+```
+
+## 📌 FAQ 常见问题
+### 1. 获取到的是 IPv6 而非 IPv4？
+由你的网络环境自动决定，设备优先使用 IPv6 时会显示 IPv6。
+
+### 2. 地区信息不准确？
+IP 库来自 Cloudflare 内置数据，部分代理、内网环境会影响精度。
+
+### 3. 可以绑定自定义域名吗？
+可以，在 Workers → 触发器 → 添加自定义域名即可。
+
+### 4. 有无请求限制？
+遵循 Cloudflare Workers 免费套餐额度，个人日常使用完全足够。
+
+### 5. 可用于商业项目吗？
+可以，本项目基于 MIT 协议，可自由使用、修改、分发。
+
+## 🎯 适用场景
+- 快速查看本机出口 IP
+- 脚本/程序自动获取公网 IP
+- 网站访客 IP 统计展示
+- 网络调试与双栈连通性测试
+- Cloudflare Workers 入门学习
+
+## 📄 License
+[MIT License](LICENSE)
+```
+
+---
+
+# 2. `_workers.js`
+```javascript
 addEventListener('fetch', event => {
   event.respondWith(handleRequest(event.request))
 })
@@ -59,8 +96,7 @@ addEventListener('fetch', event => {
 async function handleRequest(request) {
   const url = new URL(request.url)
   const path = url.pathname
-  
-  // 从 Cloudflare 请求头获取 IP 与地理信息
+
   const ip = request.headers.get('CF-Connecting-IP') || 'Unknown'
   const country = request.cf?.country || 'Unknown'
   const region = request.cf?.region || 'Unknown'
@@ -69,14 +105,12 @@ async function handleRequest(request) {
   const timezone = request.cf?.timezone || 'Unknown'
   const timestamp = new Date().toLocaleString('zh-CN', { timeZone: timezone })
 
-  // 纯文本 IP 接口
   if (path === '/ip') {
     return new Response(ip, {
       headers: { 'Content-Type': 'text/plain; charset=utf-8' }
     })
   }
 
-  // JSON 接口
   if (path === '/json') {
     const data = {
       ip,
@@ -92,114 +126,39 @@ async function handleRequest(request) {
     })
   }
 
-  // 默认网页界面
   const html = `
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IP Checker | Cloudflare Workers</title>
-    <style>
-        :root {
-            --bg: #0f172a;
-            --text: #e2e8f0;
-            --card: #1e293b;
-            --border: #334155;
-            --accent: #38bdf8;
-        }
-        @media (prefers-color-scheme: light) {
-            :root {
-                --bg: #f8fafc;
-                --text: #1e293b;
-                --card: #ffffff;
-                --border: #e2e8f0;
-                --accent: #0ea5e9;
-            }
-        }
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: system-ui, -apple-system, sans-serif;
-        }
-        body {
-            background: var(--bg);
-            color: var(--text);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
-        .container {
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 32px;
-            max-width: 500px;
-            width: 100%;
-            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.2);
-        }
-        h1 {
-            font-size: 24px;
-            margin-bottom: 24px;
-            color: var(--accent);
-            text-align: center;
-        }
-        .info-item {
-            display: flex;
-            justify-content: space-between;
-            padding: 12px 0;
-            border-bottom: 1px solid var(--border);
-        }
-        .info-item:last-child {
-            border-bottom: none;
-        }
-        .label {
-            font-weight: 500;
-            opacity: 0.8;
-        }
-        .value {
-            font-weight: 600;
-            text-align: right;
-            word-break: break-all;
-        }
-        .footer {
-            margin-top: 24px;
-            text-align: center;
-            font-size: 12px;
-            opacity: 0.6;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IP Check</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#f8fafc;font-family:system-ui,-apple-system,sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+@media(prefers-color-scheme:dark){body{background:#0f172a;color:#e2e8f0}}
+.container{background:#fff;border:1px solid #e2e8f0;border-radius:16px;box-shadow:0 10px 25px -5px rgba(0,0,0,.1);padding:32px;max-width:500px;width:100%}
+@media(prefers-color-scheme:dark){.container{background:#1e293b;border-color:#334155}}
+h1{font-size:24px;margin-bottom:24px;text-align:center;color:#0ea5e9}
+.item{display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid #e2e8f0}
+@media(prefers-color-scheme:dark){.item{border-color:#334155}}
+.item:last-child{border-bottom:none}
+.label{opacity:.8}
+.value{font-weight:600;word-break:break-all}
+.footer{margin-top:24px;text-align:center;font-size:12px;opacity:.6}
+</style>
 </head>
 <body>
-    <div class="container">
-        <h1>🌐 你的 IP 信息</h1>
-        <div class="info-item">
-            <span class="label">IP 地址</span>
-            <span class="value">${ip}</span>
-        </div>
-        <div class="info-item">
-            <span class="label">国家/地区</span>
-            <span class="value">${country}</span>
-        </div>
-        <div class="info-item">
-            <span class="label">城市</span>
-            <span class="value">${city}, ${region}</span>
-        </div>
-        <div class="info-item">
-            <span class="label">Cloudflare 节点</span>
-            <span class="value">${colo}</span>
-        </div>
-        <div class="info-item">
-            <span class="label">访问时间</span>
-            <span class="value">${timestamp}</span>
-        </div>
-        <div class="footer">
-            Powered by Cloudflare Workers
-        </div>
-    </div>
+<div class="container">
+<h1>🌐 IP 信息查询</h1>
+<div class="item"><span class="label">IP 地址</span><span class="value">${ip}</span></div>
+<div class="item"><span class="label">国家/地区</span><span class="value">${country}</span></div>
+<div class="item"><span class="label">地区</span><span class="value">${region}</span></div>
+<div class="item"><span class="label">城市</span><span class="value">${city}</span></div>
+<div class="item"><span class="label">CF 节点</span><span class="value">${colo}</span></div>
+<div class="item"><span class="label">时间</span><span class="value">${timestamp}</span></div>
+<div class="footer">Powered by Cloudflare Workers</div>
+</div>
 </body>
 </html>
   `
@@ -211,13 +170,65 @@ async function handleRequest(request) {
     }
   })
 }
-🎯 适用场景
-个人 / 企业网站的访客 IP 统计与访问分析
-网络工具类站点的 IP 查询功能
-脚本 / 程序自动获取当前出口 IP 地址
-学习 Cloudflare Workers 无服务器开发的入门示例
-测试 IPv4/IPv6 双栈网络连通性
-📄 许可证
-MIT License - 可自由使用、修改与分发，无任何限制
-🤝 贡献与反馈
-欢迎提交 Issue 反馈问题，或通过 Pull Request 提交功能改进！
+```
+
+---
+
+# 3. `wrangler.toml`
+```toml
+name = "cf-workers-ipcheck"
+main = "_workers.js"
+compatibility_date = "2024-04-01"
+
+[vars]
+# 这里可放环境变量，本项目无需
+```
+
+---
+
+# 4. `LICENSE` (MIT)
+```
+MIT License
+
+Copyright (c) 2026 ASIACOMKHK
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
+---
+
+# 5. `.gitignore`
+```
+node_modules/
+.DS_Store
+*.log
+.wrangler/
+dist/
+```
+
+---
+
+## 最终文件夹结构
+```
+CF-workers-ipcheck/
+├── _workers.js
+├── README.md
+├── wrangler.toml
+├── LICENSE
+└── .gitignore
