@@ -1,9 +1,4 @@
-下面是**整套完整文件内容**，你直接新建对应文件复制进去即可上传 GitHub：
-
----
-
-# 1. `README.md`
-```markdown
+1.markdown
 # CF-workers-ipcheck
 ![GitHub](https://img.shields.io/github/license/ASIACOMKHK/CF-workers-ipcheck)
 ![Cloudflare Workers](https://img.shields.io/badge/Cloudflare-Workers-F38020)
