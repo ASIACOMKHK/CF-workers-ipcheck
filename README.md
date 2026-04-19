@@ -16,7 +16,7 @@
 - 全球边缘节点响应，延迟极低
 
 ## 🖼️ 演示截图
-![演示截图](https://raw.githubusercontent.com/ASIACOMKHK/CF-workers-ipcheck/main/screenshot.png)
+![演示截图](af187c088c1ae5ccfeb089576c5535d4.png)
 
 ## 🚀 快速部署
 
