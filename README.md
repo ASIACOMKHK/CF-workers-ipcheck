@@ -23,7 +23,7 @@
 ---
 
 ## 🖼️ 演示截图
-![IP Checker 演示截图](https://raw.githubusercontent.com/ASIACOMKHK/CF-workers-ipcheck/main/screenshot.png)
+![IP Checker 演示截图](af187c088c1ae5ccfeb089576c5535d4.png)
 
 ---
 
