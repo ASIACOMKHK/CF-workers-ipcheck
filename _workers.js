@@ -1,7 +1,72 @@
 addEventListener('fetch', event => {
   event.respondWith(handleRequest(event.request))
 })
+
 async function handleRequest(request) {
+  const url = new URL(request.url);
+
+  // 路由：Service Worker 脚本
+  if (url.pathname === '/sw.js') {
+    const swCode = `
+const CACHE_NAME = 'cf-diag-v1';
+const PRECACHE_URLS = ['/'];
+
+self.addEventListener('install', event => {
+  event.waitUntil(
+    caches.open(CACHE_NAME)
+      .then(cache => cache.addAll(PRECACHE_URLS))
+      .then(() => self.skipWaiting())
+  );
+});
+
+self.addEventListener('activate', event => {
+  event.waitUntil(self.clients.claim());
+});
+
+self.addEventListener('fetch', event => {
+  event.respondWith(
+    caches.match(event.request)
+      .then(cached => {
+        const networked = fetch(event.request)
+          .then(response => {
+            if (response && response.status === 200) {
+              const clone = response.clone();
+              caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+            }
+            return response;
+          })
+          .catch(() => cached);
+        return cached || networked;
+      })
+  );
+});
+    `;
+    return new Response(swCode.trim(), {
+      headers: { 'content-type': 'application/javascript', 'cache-control': 'max-age=3600' }
+    });
+  }
+
+  // 路由：Web App Manifest
+  if (url.pathname === '/manifest.json') {
+    const manifest = JSON.stringify({
+      name: 'Network Diagnostics',
+      short_name: 'NetDiag',
+      start_url: '/',
+      display: 'standalone',
+      background_color: '#0a0b0d',
+      theme_color: '#00e676',
+      icons: [{
+        src: '/favicon.ico',
+        sizes: '64x64',
+        type: 'image/x-icon'
+      }]
+    });
+    return new Response(manifest, {
+      headers: { 'content-type': 'application/json', 'cache-control': 'max-age=3600' }
+    });
+  }
+
+  // 主诊断页面
   const workerStart = Date.now();
   const cf = request.cf || {};
   
@@ -35,7 +100,11 @@ async function handleRequest(request) {
     tlsVersion: escapeForJS(cf.tlsVersion || 'N/A'),
     tlsCipher: escapeForJS(cf.tlsCipher || 'N/A'),
     botScore: cf.botManagement?.score ?? 100,
-    clientIp: escapeForJS(request.headers.get('cf-connecting-ip') || 'N/A')
+    clientIp: escapeForJS(request.headers.get('cf-connecting-ip') || 'N/A'),
+    httpProtocolRaw: cf.httpProtocol || 'N/A',
+    latNum: lat,
+    lonNum: lon,
+    tlsClientHelloLength: cf.tlsClientHelloLength || 0          // 新增 ECH 探测
   };
   const acceptLang = request.headers.get('accept-language') || '';
   let defaultLang = 'en';
@@ -48,6 +117,7 @@ async function handleRequest(request) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TERMINAL DIAGNOSTICS</title>
+    <link rel="manifest" href="/manifest.json">
     <style>
         :root { --green: #00e676; --bg: #0a0b0d; --dim: #666; --red: #ff5252; --orange: #ffa726; --yellow: #ffd600; }
         * { box-sizing: border-box; }
@@ -195,7 +265,7 @@ async function handleRequest(request) {
             flex-wrap: wrap;
             gap: 10px;
         }
-        .copy-btn {
+        .copy-btn, .action-btn {
             background: transparent;
             border: 1px solid var(--dim);
             color: var(--dim);
@@ -205,9 +275,13 @@ async function handleRequest(request) {
             font-family: inherit;
             transition: 0.3s;
         }
-        .copy-btn:hover {
+        .copy-btn:hover, .action-btn:hover {
             border-color: var(--green);
             color: var(--green);
+        }
+        .loss-result {
+            margin-top: 6px;
+            font-size: 10px;
         }
         @media (max-width: 600px) { 
             .grid { grid-template-columns: 1fr; } 
@@ -245,10 +319,11 @@ async function handleRequest(request) {
                     <div class="row"><span id="t-dc-label">DC / PROXY</span><span id="s-dc">---</span></div>
                     <div class="row"><span id="t-risk">RISK LEVEL</span><span id="s-risk">---</span></div>
                     <div class="row"><span id="t-asn-label">ASN</span><span>${data.asn}</span></div>
-                    <div class="row"><span id="t-proto-label">PROTOCOL</span><span>${data.proto}</span></div>
+                    <div class="row"><span id="t-proto-label">PROTOCOL</span><span id="proto-val">${data.proto}</span></div>
                     <div class="row"><span id="t-tls-label">TLS</span><span>${data.tlsVersion}</span></div>
                     <div class="row"><span id="t-cipher-label">CIPHER</span><span style="font-size:9px;">${data.tlsCipher}</span></div>
-                    <div class="row"><span id="t-bot-label">BOT SCORE</span><span>${data.botScore}</span></div>
+                    <div class="row"><span id="t-ech-label">ECH</span><span id="ech-val">---</span></div>
+                    <div class="row"><span id="t-bot-label">BOT SCORE</span><span id="bot-score-val">${data.botScore}</span></div>
                     <div class="row"><span id="t-worker">WORKER TIME</span><span>${workerDuration}ms</span></div>
                 </div>
                 
@@ -261,19 +336,26 @@ async function handleRequest(request) {
             </div>
             
             <div class="col">
-                <div class="label"><span id="t-rtt">LOCAL RTT</span> <span id="rtt-num">--</span>ms</div>
+                <div class="label" style="display: flex; align-items: baseline; gap: 10px;">
+                    <span id="t-rtt">LOCAL RTT</span>
+                    <span id="rtt-num">--</span>ms
+                    <span style="margin-left: 12px; color: var(--dim);" id="t-jitter">JITTER</span>
+                    <span id="jitter-val">--</span>
+                </div>
                 <div class="chart-container">
                     <canvas id="chart"></canvas>
                 </div>
                 
-                <div class="label" style="margin-top:20px" id="t-perf">BROWSER TIMING</div>
-                <div class="item-box" style="font-size: 11px;">
-                    <div class="row"><span id="t-dns-label">DNS</span><span id="perf-dns">--</span></div>
-                    <div class="row"><span id="t-tcp-label">TCP</span><span id="perf-tcp">--</span></div>
-                    <div class="row"><span id="t-tls-perf-label">TLS</span><span id="perf-tls">--</span></div>
-                    <div class="row"><span id="t-ttfb-label">TTFB</span><span id="perf-ttfb">--</span></div>
-                    <div class="row"><span id="t-dom-label">DOM</span><span id="perf-dom">--</span></div>
+                <div style="margin-top: 10px; display: flex; align-items: center; gap: 10px;">
+                    <button class="action-btn" id="btn-loss-test"><span id="t-loss-btn">TEST PACKET LOSS</span></button>
+                    <span id="loss-result" class="loss-result" style="color: var(--dim);"></span>
                 </div>
+
+                <div class="label" style="margin-top:20px" id="t-user-geo">USER IP LOCATION</div>
+                <div class="item-box" style="font-size: 12px;" id="user-geo-info">
+                    <span style="color: var(--dim);">Fetching...</span>
+                </div>
+
                 <div class="label" style="margin-top:20px" id="t-hw">HARDWARE INFO</div>
                 <div id="hw-info" style="font-size: 10px; color: var(--dim); border-left: 2px solid var(--dim); padding-left: 10px;">Loading...</div>
             </div>
@@ -307,7 +389,6 @@ async function handleRequest(request) {
                     no: 'NO',
                     unavailable: 'Unavailable',
                     worker: 'WORKER TIME',
-                    perf: 'BROWSER TIMING',
                     copy: 'COPY REPORT',
                     copied: 'COPIED!',
                     reportTitle: 'NETWORK DIAGNOSTICS REPORT',
@@ -316,12 +397,17 @@ async function handleRequest(request) {
                     protoLabel: 'PROTOCOL',
                     tlsLabel: 'TLS',
                     cipherLabel: 'CIPHER',
+                    echLabel: 'ECH',
+                    echEnabled: 'ENABLED',
+                    echDisabled: 'DISABLED',
                     botLabel: 'BOT SCORE',
-                    dnsLabel: 'DNS',
-                    tcpLabel: 'TCP',
-                    tlsPerfLabel: 'TLS',
-                    ttfbLabel: 'TTFB',
-                    domLabel: 'DOM'
+                    botRisk: 'RISK LEVEL:',
+                    lossBtn: 'TEST PACKET LOSS',
+                    lossTesting: 'Testing...',
+                    lossResult: 'Loss:',
+                    lossNone: '0% (no loss)',
+                    jitter: 'JITTER',
+                    userGeo: 'USER IP LOCATION'
                 },
                 'zh-CN': { 
                     status: '系统状态: 正常运行',
@@ -339,7 +425,6 @@ async function handleRequest(request) {
                     no: '否',
                     unavailable: '获取失败',
                     worker: '边缘耗时',
-                    perf: '浏览器计时',
                     copy: '复制报告',
                     copied: '已复制!',
                     reportTitle: '网络诊断报告',
@@ -348,12 +433,17 @@ async function handleRequest(request) {
                     protoLabel: '协议',
                     tlsLabel: 'TLS',
                     cipherLabel: '加密套件',
+                    echLabel: 'ECH',
+                    echEnabled: '已启用',
+                    echDisabled: '未启用',
                     botLabel: '机器人评分',
-                    dnsLabel: 'DNS',
-                    tcpLabel: 'TCP',
-                    tlsPerfLabel: 'TLS',
-                    ttfbLabel: 'TTFB',
-                    domLabel: 'DOM'
+                    botRisk: '风险等级:',
+                    lossBtn: '测试丢包率',
+                    lossTesting: '测试中...',
+                    lossResult: '丢包率:',
+                    lossNone: '0% (无丢包)',
+                    jitter: '抖动',
+                    userGeo: '真实IP位置'
                 },
                 'zh-TW': { 
                     status: '系統狀態: 正常運行',
@@ -371,7 +461,6 @@ async function handleRequest(request) {
                     no: '否',
                     unavailable: '獲取失敗',
                     worker: '邊緣耗時',
-                    perf: '瀏覽器計時',
                     copy: '複製報告',
                     copied: '已複製!',
                     reportTitle: '網路診斷報告',
@@ -380,12 +469,17 @@ async function handleRequest(request) {
                     protoLabel: '協定',
                     tlsLabel: 'TLS',
                     cipherLabel: '加密套件',
+                    echLabel: 'ECH',
+                    echEnabled: '已啟用',
+                    echDisabled: '未啟用',
                     botLabel: '機器人評分',
-                    dnsLabel: 'DNS',
-                    tcpLabel: 'TCP',
-                    tlsPerfLabel: 'TLS',
-                    ttfbLabel: 'TTFB',
-                    domLabel: 'DOM'
+                    botRisk: '風險等級:',
+                    lossBtn: '測試丟包率',
+                    lossTesting: '測試中...',
+                    lossResult: '丟包率:',
+                    lossNone: '0% (無丟包)',
+                    jitter: '抖動',
+                    userGeo: '真實IP位置'
                 }
             };
             const BACKEND_DATA = {
@@ -395,15 +489,19 @@ async function handleRequest(request) {
                 city: "${data.city}",
                 region: "${data.region}",
                 country: "${data.country}",
-                lat: "${data.lat}°${data.latDir}",
-                lon: "${data.lon}°${data.lonDir}",
+                lat: "${data.lat}\u00b0${data.latDir}",
+                lon: "${data.lon}\u00b0${data.lonDir}",
                 proto: "${data.proto}",
                 tlsVersion: "${data.tlsVersion}",
                 tlsCipher: "${data.tlsCipher}",
                 botScore: "${data.botScore}",
                 rayId: "${data.rayId}",
                 clientIp: "${data.clientIp}",
-                workerDuration: "${workerDuration}"
+                workerDuration: "${workerDuration}",
+                httpProtocolRaw: "${data.httpProtocolRaw}",
+                latNum: ${data.latNum},
+                lonNum: ${data.lonNum},
+                tlsClientHelloLength: ${data.tlsClientHelloLength}
             };
             
             const elements = {
@@ -415,17 +513,20 @@ async function handleRequest(request) {
                 sDc: document.getElementById('s-dc'),
                 sRisk: document.getElementById('s-risk'),
                 hwInfo: document.getElementById('hw-info'),
-                perfDns: document.getElementById('perf-dns'),
-                perfTcp: document.getElementById('perf-tcp'),
-                perfTls: document.getElementById('perf-tls'),
-                perfTtfb: document.getElementById('perf-ttfb'),
-                perfDom: document.getElementById('perf-dom'),
-                copyBtn: document.getElementById('copy-report')
+                copyBtn: document.getElementById('copy-report'),
+                jitterVal: document.getElementById('jitter-val'),
+                protoVal: document.getElementById('proto-val'),
+                userGeoInfo: document.getElementById('user-geo-info'),
+                echVal: document.getElementById('ech-val'),
+                botScoreVal: document.getElementById('bot-score-val'),
+                lossBtn: document.getElementById('btn-loss-test'),
+                lossResult: document.getElementById('loss-result')
             };
             let currentLang = localStorage.getItem('pref-lang') || '${defaultLang}';
             const rttData = [];
             const MAX_RTT_POINTS = 40;
-            let perfMetrics = {};
+            const jitterHistory = [];
+            const MAX_JITTER_HISTORY = 10;
             function isDataCenter() {
                 const patterns = /data center|hosting|cloud|akamai|google|amazon|microsoft|aliyun|tencent|fastly|cloudflare|incapsula|leaseweb|ovh|digitalocean|vultr|linode/i;
                 return patterns.test(BACKEND_DATA.asOrg);
@@ -449,19 +550,17 @@ async function handleRequest(request) {
                     't-live': t.live,
                     't-risk': t.risk,
                     't-worker': t.worker,
-                    't-perf': t.perf,
                     't-copy': t.copy,
                     't-dc-label': t.dcLabel,
                     't-asn-label': t.asnLabel,
                     't-proto-label': t.protoLabel,
                     't-tls-label': t.tlsLabel,
                     't-cipher-label': t.cipherLabel,
+                    't-ech-label': t.echLabel,
                     't-bot-label': t.botLabel,
-                    't-dns-label': t.dnsLabel,
-                    't-tcp-label': t.tcpLabel,
-                    't-tls-perf-label': t.tlsPerfLabel,
-                    't-ttfb-label': t.ttfbLabel,
-                    't-dom-label': t.domLabel
+                    't-jitter': t.jitter,
+                    't-user-geo': t.userGeo,
+                    't-loss-btn': t.lossBtn
                 };
                 Object.entries(textIds).forEach(([id, text]) => {
                     const el = document.getElementById(id);
@@ -476,6 +575,45 @@ async function handleRequest(request) {
                 elements.sDc.style.color = dc ? 'var(--red)' : 'var(--green)';
                 elements.sRisk.textContent = dc ? t.high : t.clean;
                 elements.sRisk.style.color = dc ? 'var(--red)' : 'var(--green)';
+
+                // 协议与 QUIC 标识
+                if (elements.protoVal) {
+                    const rawProto = BACKEND_DATA.httpProtocolRaw;
+                    let displayText = rawProto;
+                    if (rawProto.toUpperCase().includes('HTTP/3')) {
+                        displayText += ' ⚡ QUIC';
+                        elements.protoVal.style.color = 'var(--green)';
+                        elements.protoVal.style.fontWeight = 'bold';
+                    } else {
+                        elements.protoVal.style.color = '';
+                        elements.protoVal.style.fontWeight = '';
+                    }
+                    elements.protoVal.textContent = displayText;
+                }
+
+                // ECH 探测结果
+                if (elements.echVal) {
+                    const helloLen = BACKEND_DATA.tlsClientHelloLength;
+                    if (helloLen > 0) {
+                        elements.echVal.textContent = t.echEnabled + ' (len:' + helloLen + ')';
+                        elements.echVal.style.color = 'var(--green)';
+                    } else {
+                        elements.echVal.textContent = t.echDisabled;
+                        elements.echVal.style.color = 'var(--red)';
+                    }
+                }
+
+                // Bot Score 风险解读 (颜色+文字)
+                if (elements.botScoreVal) {
+                    const score = parseInt(BACKEND_DATA.botScore, 10);
+                    let levelText = '';
+                    let color = '';
+                    if (score >= 100) { levelText = ' 👤 HUMAN'; color = 'var(--green)'; }
+                    else if (score >= 80) { levelText = ' ✓ LOW'; color = 'var(--yellow)'; }
+                    else if (score >= 30) { levelText = ' ⚠ MEDIUM'; color = 'var(--orange)'; }
+                    else { levelText = ' ❌ HIGH'; color = 'var(--red)'; }
+                    elements.botScoreVal.innerHTML = score + '<span style="color:' + color + '; margin-left: 6px;">' + levelText + '</span>';
+                }
             }
             window.setLang = function(lang) {
                 currentLang = lang;
@@ -487,6 +625,9 @@ async function handleRequest(request) {
                 }
                 if (elements.v6.textContent.includes('Unavailable') || elements.v6.textContent.includes('获取失败') || elements.v6.textContent.includes('獲取失敗')) {
                     elements.v6.textContent = t.unavailable;
+                }
+                if (elements.v4.textContent && !elements.v4.textContent.includes('Detecting') && !elements.v4.textContent.includes(t.unavailable)) {
+                    fetchUserGeo();
                 }
             };
             function resizeCanvas() {
@@ -547,11 +688,59 @@ async function handleRequest(request) {
                         { method: 'HEAD', cache: 'no-store' }, 2000);
                     const diff = Math.round(performance.now() - start);
                     elements.rttNum.textContent = diff;
+                    
+                    if (rttData.length > 0) {
+                        const jitter = Math.abs(diff - rttData[rttData.length - 1]);
+                        jitterHistory.push(jitter);
+                        if (jitterHistory.length > MAX_JITTER_HISTORY) jitterHistory.shift();
+                        const avgJitter = Math.round(jitterHistory.reduce((a,b) => a+b, 0) / jitterHistory.length);
+                        elements.jitterVal.textContent = avgJitter + 'ms';
+                    }
+                    
                     rttData.push(diff);
                     if (rttData.length > MAX_RTT_POINTS) rttData.shift();
                     drawChart();
                 } catch (e) {}
                 setTimeout(testRtt, 3000);
+            }
+            function calculateDistance(lat1, lon1, lat2, lon2) {
+                const R = 6371;
+                const dLat = (lat2 - lat1) * Math.PI / 180;
+                const dLon = (lon2 - lon1) * Math.PI / 180;
+                const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                          Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                          Math.sin(dLon/2) * Math.sin(dLon/2);
+                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+                return Math.round(R * c);
+            }
+            async function fetchUserGeo() {
+                const ip = elements.v4.textContent;
+                if (!ip || ip.includes('Detecting') || ip.includes(i18n[currentLang].unavailable)) {
+                    setTimeout(fetchUserGeo, 1000);
+                    return;
+                }
+                try {
+                    const res = await fetch(\`https://ipapi.co/\${ip}/json/\`);
+                    const data = await res.json();
+                    if (data.error) throw new Error(data.reason);
+                    
+                    const dist = calculateDistance(
+                        BACKEND_DATA.latNum, BACKEND_DATA.lonNum,
+                        data.latitude, data.longitude
+                    );
+                    
+                    elements.userGeoInfo.innerHTML = \`
+                        <div style="display: flex; justify-content: space-between;">
+                            <span>\${data.city}, \${data.region}, \${data.country_name}</span>
+                            <span style="color: var(--yellow);">\${dist} km</span>
+                        </div>
+                        <div style="color: var(--dim); font-size: 10px; margin-top: 4px;">
+                            ISP: \${data.org} | IP: \${ip}
+                        </div>
+                    \`;
+                } catch (e) {
+                    elements.userGeoInfo.innerHTML = '<span style="color: var(--red);">Geo lookup failed</span>';
+                }
             }
             function updateHardwareInfo() {
                 const cores = navigator.hardwareConcurrency || 'N/A';
@@ -559,24 +748,37 @@ async function handleRequest(request) {
                 const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
                 elements.hwInfo.textContent = [screenInfo, cores + ' CORE', timezone].join(' | ');
             }
-            function collectPerfMetrics() {
-                const perf = performance.getEntriesByType('navigation')[0];
-                if (!perf) {
-                    setTimeout(collectPerfMetrics, 100);
-                    return;
+
+            // 丢包率测试
+            let lossTestRunning = false;
+            async function runLossTest() {
+                if (lossTestRunning) return;
+                lossTestRunning = true;
+                const t = i18n[currentLang];
+                elements.lossResult.textContent = t.lossTesting;
+                elements.lossResult.style.color = 'var(--yellow)';
+                
+                const total = 10;
+                let failed = 0;
+                for (let i = 0; i < total; i++) {
+                    try {
+                        await fetchWithTimeout(window.location.href + '?_loss=' + Date.now() + i, 
+                            { method: 'HEAD', cache: 'no-store' }, 1500);
+                    } catch (e) {
+                        failed++;
+                    }
                 }
-                const dns = Math.round(perf.domainLookupEnd - perf.domainLookupStart);
-                const tcp = Math.round(perf.connectEnd - perf.connectStart);
-                const tls = Math.round(perf.connectEnd - perf.secureConnectionStart);
-                const ttfb = Math.round(perf.responseStart - perf.requestStart);
-                const dom = Math.round(perf.domContentLoadedEventEnd - perf.domContentLoadedEventStart);
-                perfMetrics = { dns, tcp, tls, ttfb, dom };
-                elements.perfDns.textContent = dns > 0 ? dns + 'ms' : '--';
-                elements.perfTcp.textContent = tcp > 0 ? tcp + 'ms' : '--';
-                elements.perfTls.textContent = (tls > 0 && perf.secureConnectionStart > 0) ? tls + 'ms' : '--';
-                elements.perfTtfb.textContent = ttfb > 0 ? ttfb + 'ms' : '--';
-                elements.perfDom.textContent = dom > 0 ? dom + 'ms' : '--';
+                const lossPercent = Math.round((failed / total) * 100);
+                if (lossPercent === 0) {
+                    elements.lossResult.textContent = t.lossNone;
+                    elements.lossResult.style.color = 'var(--green)';
+                } else {
+                    elements.lossResult.textContent = t.lossResult + ' ' + lossPercent + '% (' + failed + '/' + total + ' lost)';
+                    elements.lossResult.style.color = 'var(--red)';
+                }
+                lossTestRunning = false;
             }
+
             function generateReportText() {
                 const t = i18n[currentLang];
                 const now = new Date().toISOString();
@@ -601,6 +803,7 @@ AS Org: \${BACKEND_DATA.asOrg}
 \${t.protoLabel}: \${BACKEND_DATA.proto}
 \${t.tlsLabel}: \${BACKEND_DATA.tlsVersion}
 \${t.cipherLabel}: \${BACKEND_DATA.tlsCipher}
+\${t.echLabel}: \${elements.echVal.textContent}
 \${t.botLabel}: \${BACKEND_DATA.botScore}
 \${t.worker}: \${BACKEND_DATA.workerDuration}ms
 --- LOCATION ---
@@ -608,11 +811,7 @@ City/Region/Country: \${BACKEND_DATA.city}, \${BACKEND_DATA.region}, \${BACKEND_
 Coordinates: \${BACKEND_DATA.lat} / \${BACKEND_DATA.lon}
 --- PERFORMANCE ---
 \${t.rtt}: \${elements.rttNum.textContent}ms
-\${t.dnsLabel}: \${perfMetrics.dns || '--'}ms
-\${t.tcpLabel}: \${perfMetrics.tcp || '--'}ms
-\${t.tlsPerfLabel}: \${perfMetrics.tls || '--'}ms
-\${t.ttfbLabel}: \${perfMetrics.ttfb || '--'}ms
-\${t.domLabel}: \${perfMetrics.dom || '--'}ms
+\${t.jitter}: \${elements.jitterVal.textContent}
 --- HARDWARE ---
 \${elements.hwInfo.textContent}
 \`;
@@ -631,6 +830,14 @@ Coordinates: \${BACKEND_DATA.lat} / \${BACKEND_DATA.lon}
                     alert('Copy failed: ' + err);
                 }
             }
+
+            // 注册 Service Worker (PWA)
+            if ('serviceWorker' in navigator) {
+                window.addEventListener('load', () => {
+                    navigator.serviceWorker.register('/sw.js').catch(e => console.log('SW registration failed', e));
+                });
+            }
+
             function init() {
                 updateUI();
                 updateHardwareInfo();
@@ -638,15 +845,13 @@ Coordinates: \${BACKEND_DATA.lat} / \${BACKEND_DATA.lon}
                 const observer = new ResizeObserver(() => resizeCanvas());
                 observer.observe(elements.chart.parentElement);
                 resizeCanvas();
-                getIP('v4');
+                getIP('v4').then(() => {
+                    fetchUserGeo();
+                });
                 getIP('v6');
                 testRtt();
-                if (document.readyState === 'complete') {
-                    collectPerfMetrics();
-                } else {
-                    window.addEventListener('load', collectPerfMetrics);
-                }
                 elements.copyBtn.addEventListener('click', copyReport);
+                elements.lossBtn.addEventListener('click', runLossTest);
             }
             init();
         })();
