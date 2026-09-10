@@ -207,23 +207,32 @@ function handleOptions(request) {
 }
 
 // ==================== IP 欺诈评分函数 ====================
+// 数据源: ip-api.com 免费接口（http，Workers 出站可访问）。
+// 说明: ip-api 不单独区分 VPN/Tor，isVpn 复用 proxy 标记、isTor 恒为 false；
+// score 为基于 proxy/hosting/mobile 派生的风险分（0-100），非厂商原生评分。
 async function getIpFraudScore(ip) {
   if (!ip || ip === 'unknown') return null;
   try {
-    const url = `https://scamalytics.com/api/ip/${ip}`;
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 4000);
-    const resp = await fetch(url, { signal: controller.signal });
-    clearTimeout(timeout);
+    const url = `http://ip-api.com/json/${ip}?fields=status,message,country,proxy,hosting,mobile`;
+    const resp = await fetch(url, { signal: AbortSignal.timeout(4000) });
     if (!resp.ok) return null;
     const data = await resp.json();
+    if (!data || data.status !== 'success') return null;
+    const isProxy = !!data.proxy;
+    const isHosting = !!data.hosting;
+    const isMobile = !!data.mobile;
+    let score = 0;
+    if (isProxy) score += 60;
+    if (isHosting) score += 30;
+    if (isMobile) score += 5;
+    score = Math.min(score, 100);
     return {
-      score: data.score !== undefined ? data.score : null,
-      isProxy: data.is_proxy || false,
-      isVpn: data.is_vpn || false,
-      isTor: data.is_tor || false,
-      isHosting: data.is_hosting || false,
-      riskLevel: data.score >= 80 ? 'high' : (data.score >= 50 ? 'medium' : 'low')
+      score,
+      isProxy,
+      isVpn: isProxy,
+      isTor: false,
+      isHosting,
+      riskLevel: score >= 80 ? 'high' : (score >= 50 ? 'medium' : 'low')
     };
   } catch (e) {
     return null;
@@ -393,6 +402,9 @@ async function handleRequest(event) {
     }
     cpulimit.count++;
     cpuRateLimit.set(clientIP, cpulimit);
+    if (cpuRateLimit.size > 5000 || Math.random() < 0.05) {
+      cleanupRateLimit();
+    }
 
     const iterations = clampInt(url.searchParams.get('n'), 500000, 1, 500000);
     const start = performance.now();
@@ -405,7 +417,7 @@ async function handleRequest(event) {
       duration: duration,
       iterations: iterations,
       opsMs: duration > 0 ? Math.round(iterations / duration * 100) / 100 : iterations,
-      result: result.toString().substring(0, 8)
+      result: Number.isFinite(result) ? result.toFixed(2) : '0'
     }), {
       headers: {
         'content-type': 'application/json',
@@ -877,7 +889,7 @@ async function handleRequest(event) {
   
   // 生成随机 nonce 用于 CSP
   const nonce = crypto.randomUUID();
-  const cspHeader = `default-src 'self'; script-src 'self' 'nonce-${nonce}' https://cdnjs.cloudflare.com https://fonts.googleapis.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; connect-src 'self' https://ipapi.co https://api4.ipify.org https://api6.ipify.org https://ipv4.icanhazip.com https://ipv6.icanhazip.com https://ip4.seeip.org https://scamalytics.com; img-src 'self' data: https://www.netflix.com https://www.disneyplus.com https://www.youtube.com https://chat.openai.com;`;
+  const cspHeader = `default-src 'self'; script-src 'self' 'nonce-${nonce}' https://cdnjs.cloudflare.com https://fonts.googleapis.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; connect-src 'self' https:; img-src 'self' data: https://cloudflare.com https://www.google.com https://github.com https://www.netflix.com https://www.disneyplus.com https://www.youtube.com https://chat.openai.com;`;
 
   // ============================================================
   // 开始 HTML 模板（全界面国际化 + 美化）
@@ -2282,7 +2294,7 @@ async function handleRequest(event) {
             const elements = {
                 v4: document.getElementById('v4'), v6: document.getElementById('v6'),
                 rttNum: document.getElementById('rtt-num'), chart: document.getElementById('chart'),
-                ctx: document.getElementById('chart').getContext('2d'),
+                ctx: (function() { var c = document.getElementById('chart'); return c ? c.getContext('2d') : null; })(),
                 sDc: document.getElementById('s-dc'), sRisk: document.getElementById('s-risk'),
                 hwInfo: document.getElementById('hw-info'), copyBtn: document.getElementById('copy-report'),
                 jitterVal: document.getElementById('jitter-val'), protoVal: document.getElementById('proto-val'),
@@ -2539,7 +2551,7 @@ async function handleRequest(event) {
             function drawChart() {
                 const canvas = elements.chart;
                 const ctx = elements.ctx;
-                if (!canvas || canvas.width === 0 || canvas.height === 0) return;
+                if (!canvas || !ctx || canvas.width === 0 || canvas.height === 0) return;
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
                 if (rttData.length < 2) return;
                 
@@ -2665,7 +2677,7 @@ async function handleRequest(event) {
                 if (!rttTestRunning) return;
                 const start = performance.now();
                 try {
-                    await fetchWithTimeout(window.location.href + '?_=' + Date.now(), 
+                    await fetchWithTimeout(window.location.origin + '/health?_=' + Date.now(), 
                         { method: 'HEAD', cache: 'no-store' }, 2000);
                     const diff = Math.round(performance.now() - start);
                     if (elements.rttNum) elements.rttNum.textContent = diff;
@@ -3045,7 +3057,7 @@ async function handleRequest(event) {
                 let failed = 0;
                 for (let i = 0; i < total; i++) {
                     try {
-                        await fetchWithTimeout(window.location.href + '?_loss=' + Date.now() + i, 
+                        await fetchWithTimeout(window.location.origin + '/health?_loss=' + Date.now() + i, 
                             { method: 'HEAD', cache: 'no-store' }, 3000);
                     } catch (e) {
                         failed++;
