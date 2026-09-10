@@ -2,60 +2,104 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>NetSight Pro · 极光网络诊断</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+
+    <!-- ===== SEO ===== -->
+    <title>NetSight Pro · 极光网络诊断 | Aurora Network Diagnostics</title>
+    <meta name="description" content="NetSight Pro 是部署在 Cloudflare Workers 上的开源全功能网络诊断工具，提供实时延迟、带宽测速、CPU、WebSocket、TTFB、WebRTC 泄漏检测等 20+ 项能力。An open-source, full-featured network diagnostic tool on Cloudflare Workers." />
+    <meta name="keywords" content="Cloudflare Workers, 网络诊断, network diagnostics, RTT, speedtest, latency, WebRTC, TTFB, NetSight Pro" />
+    <meta name="author" content="BlueDriftHK" />
+    <link rel="canonical" href="https://bluedrifthk.github.io/CF-workers-netdiag/" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#050510" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f0f4ff" />
+
+    <!-- ===== Open Graph / Twitter ===== -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="NetSight Pro · 极光网络诊断 | Aurora Network Diagnostics" />
+    <meta property="og:description" content="部署在 Cloudflare Workers 上的开源全功能网络诊断工具，20+ 项诊断能力。Open-source network diagnostics on Cloudflare Workers." />
+    <meta property="og:url" content="https://bluedrifthk.github.io/CF-workers-netdiag/" />
+    <meta property="og:site_name" content="NetSight Pro" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="NetSight Pro · Aurora Network Diagnostics" />
+    <meta name="twitter:description" content="开源 Cloudflare Workers 网络诊断工具 / Open-source network diagnostics on Cloudflare Workers." />
+    <meta name="twitter:creator" content="@BlueDriftHK" />
+
+    <!-- ===== Favicon (inline SVG) ===== -->
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%236366f1'/%3E%3Cpath d='M8 20l5-9 4 6 3-4 4 7z' fill='none' stroke='%2322d3ee' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E" />
+
+    <!-- ===== Fonts & Icons ===== -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+
     <style>
         /* ===== Reset & Base ===== */
-        *,
-        *::before,
-        *::after {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
+        /* ===== Dark-first theme (default) ===== */
         :root {
-            --bg: #f0f4ff;
-            --bg-card: rgba(255, 255, 255, 0.70);
-            --text: #1e1b4b;
-            --text-secondary: #4b4b6b;
-            --text-muted: #8a8aaa;
-            --accent: #6366f1;
-            --accent-hover: #4f46e5;
-            --accent-glow: rgba(99, 102, 241, 0.15);
-            --border: rgba(0, 0, 0, 0.06);
-            --shadow: 0 8px 32px rgba(99, 102, 241, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
-            --shadow-lg: 0 16px 48px rgba(99, 102, 241, 0.12), 0 4px 16px rgba(0, 0, 0, 0.06);
+            --bg: #050510;
+            --bg-card: rgba(255, 255, 255, 0.04);
+            --bg-card-hover: rgba(255, 255, 255, 0.07);
+            --text: #f0f0f5;
+            --text-secondary: #9898b0;
+            --text-muted: #5a5a72;
+
+            --accent: #818cf8;      /* indigo (primary on dark) */
+            --accent-strong: #6366f1;
+            --cyan: #22d3ee;
+            --purple: #a855f7;
+            --orange: #f38020;      /* brand orange */
+            --accent-glow: rgba(129, 140, 248, 0.18);
+
+            --border: rgba(255, 255, 255, 0.08);
+            --border-hover: rgba(255, 255, 255, 0.16);
+            --shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+            --shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.45);
+
+            --aurora-1: rgba(34, 211, 238, 0.14);
+            --aurora-2: rgba(99, 102, 241, 0.16);
+            --aurora-3: rgba(168, 85, 247, 0.12);
+            --aurora-4: rgba(243, 128, 32, 0.08);
+
             --radius: 20px;
             --radius-sm: 12px;
             --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            --font: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+            --font: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif;
         }
 
-        @media (prefers-color-scheme: dark) {
+        /* ===== Light theme (opt-in) ===== */
+        @media (prefers-color-scheme: light) {
             :root {
-                --bg: #0a0a1a;
-                --bg-card: rgba(255, 255, 255, 0.04);
-                --text: #f0f0f5;
-                --text-secondary: #9898b0;
-                --text-muted: #5a5a72;
-                --border: rgba(255, 255, 255, 0.06);
-                --shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-                --shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.4);
-                --accent: #818cf8;
-                --accent-hover: #a5b4fc;
-                --accent-glow: rgba(129, 140, 248, 0.15);
+                --bg: #f0f4ff;
+                --bg-card: rgba(255, 255, 255, 0.70);
+                --bg-card-hover: rgba(255, 255, 255, 0.85);
+                --text: #1e1b4b;
+                --text-secondary: #4b4b6b;
+                --text-muted: #8a8aaa;
+
+                --accent: #6366f1;
+                --accent-strong: #4f46e5;
+                --cyan: #0891b2;
+                --purple: #7c3aed;
+                --orange: #ea6a0f;
+                --accent-glow: rgba(99, 102, 241, 0.15);
+
+                --border: rgba(0, 0, 0, 0.08);
+                --border-hover: rgba(0, 0, 0, 0.16);
+                --shadow: 0 8px 32px rgba(99, 102, 241, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
+                --shadow-lg: 0 16px 48px rgba(99, 102, 241, 0.12), 0 4px 16px rgba(0, 0, 0, 0.06);
+
+                --aurora-1: rgba(34, 211, 238, 0.10);
+                --aurora-2: rgba(99, 102, 241, 0.12);
+                --aurora-3: rgba(168, 85, 247, 0.08);
+                --aurora-4: rgba(243, 128, 32, 0.06);
             }
         }
 
-        html {
-            scroll-behavior: smooth;
-            -webkit-font-smoothing: antialiased;
-        }
+        html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
 
         body {
             font-family: var(--font);
@@ -63,503 +107,170 @@
             color: var(--text);
             line-height: 1.6;
             padding: 0 24px;
+            position: relative;
+            overflow-x: hidden;
             transition: background 0.4s ease, color 0.4s ease;
         }
 
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 40px 20px 60px;
+        /* Subtle aurora glow — static, low-key */
+        body::before {
+            content: '';
+            position: fixed; inset: 0;
+            background:
+                radial-gradient(60% 50% at 15% 0%, var(--aurora-1) 0%, transparent 60%),
+                radial-gradient(55% 45% at 85% 10%, var(--aurora-2) 0%, transparent 60%),
+                radial-gradient(50% 45% at 70% 90%, var(--aurora-3) 0%, transparent 60%),
+                radial-gradient(45% 40% at 20% 85%, var(--aurora-4) 0%, transparent 60%);
+            pointer-events: none;
+            z-index: 0;
         }
+
+        .container { max-width: 1200px; margin: 0 auto; padding: 40px 20px 60px; position: relative; z-index: 1; }
+
+        /* Bilingual secondary text */
+        .en { display: block; font-weight: 400; color: var(--text-muted); font-size: 0.82em; margin-top: 3px; letter-spacing: 0; }
+        .inline-en { font-weight: 400; color: var(--text-muted); font-size: 0.72em; margin-left: 8px; }
 
         /* ===== Navigation ===== */
         .navbar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 16px 0;
-            flex-wrap: wrap;
-            gap: 16px;
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 16px 0; flex-wrap: wrap; gap: 16px;
             border-bottom: 1px solid var(--border);
         }
-
-        .logo {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            font-weight: 700;
-            font-size: 22px;
-            letter-spacing: -0.5px;
-        }
-
+        .logo { display: flex; align-items: center; gap: 12px; font-weight: 700; font-size: 22px; letter-spacing: -0.5px; }
         .logo i {
-            color: var(--accent);
             font-size: 28px;
+            background: linear-gradient(120deg, var(--cyan), var(--accent-strong), var(--orange));
+            -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
         }
-
-        .nav-links {
-            display: flex;
-            gap: 28px;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-
-        .nav-links a {
-            color: var(--text-secondary);
-            text-decoration: none;
-            font-weight: 500;
-            font-size: 15px;
-            transition: color var(--transition);
-        }
-
-        .nav-links a:hover {
-            color: var(--accent);
-        }
+        .nav-links { display: flex; gap: 26px; align-items: center; flex-wrap: wrap; }
+        .nav-links a { color: var(--text-secondary); text-decoration: none; font-weight: 500; font-size: 15px; transition: color var(--transition); }
+        .nav-links a:hover { color: var(--accent); }
+        .nav-links a .inline-en { font-size: 0.7em; }
 
         .btn-outline {
-            padding: 8px 18px;
-            border: 1.5px solid var(--accent);
-            border-radius: 50px;
-            color: var(--accent);
-            background: transparent;
-            font-weight: 600;
-            font-size: 14px;
-            cursor: pointer;
-            transition: all var(--transition);
-            text-decoration: none;
+            padding: 8px 18px; border: 1.5px solid var(--accent); border-radius: 50px;
+            color: var(--accent); background: transparent; font-weight: 600; font-size: 14px;
+            cursor: pointer; transition: all var(--transition); text-decoration: none;
         }
-
-        .btn-outline:hover {
-            background: var(--accent);
-            color: #fff;
-            box-shadow: 0 4px 16px var(--accent-glow);
-        }
+        .btn-outline:hover { background: var(--accent); color: #fff; box-shadow: 0 4px 16px var(--accent-glow); }
 
         .btn-primary {
-            padding: 10px 24px;
-            background: var(--accent);
-            color: #fff;
-            border: none;
-            border-radius: 50px;
-            font-weight: 600;
-            font-size: 15px;
-            cursor: pointer;
-            transition: all var(--transition);
-            text-decoration: none;
-            display: inline-block;
-            box-shadow: 0 4px 16px var(--accent-glow);
+            padding: 10px 24px; color: #fff; border: none; border-radius: 50px;
+            background: linear-gradient(120deg, var(--cyan), var(--accent-strong) 45%, var(--purple));
+            font-weight: 600; font-size: 15px; cursor: pointer; transition: all var(--transition);
+            text-decoration: none; display: inline-block; box-shadow: 0 4px 16px var(--accent-glow);
         }
-
-        .btn-primary:hover {
-            background: var(--accent-hover);
-            transform: translateY(-2px);
-            box-shadow: 0 8px 24px var(--accent-glow);
-        }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 28px var(--accent-glow); filter: brightness(1.06); }
 
         /* ===== Hero ===== */
-        .hero {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 60px;
-            align-items: center;
-            padding: 60px 0 40px;
+        .hero { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: center; padding: 60px 0 40px; }
+        .hero-content h1 { font-size: 48px; font-weight: 800; letter-spacing: -1.5px; line-height: 1.12; margin-bottom: 8px; }
+        .hero-content h1 .grad {
+            background: linear-gradient(120deg, var(--cyan), var(--accent-strong) 40%, var(--purple) 70%, var(--orange));
+            -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
         }
+        .hero-tagline { font-size: 15px; font-weight: 500; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 20px; }
+        .hero-content p { font-size: 18px; color: var(--text-secondary); max-width: 540px; margin-bottom: 32px; }
+        .hero-content p .en { display: inline; font-size: 0.86em; margin-top: 6px; }
+        .hero-actions { display: flex; gap: 16px; flex-wrap: wrap; }
+        .hero-actions .btn-primary i { margin-right: 8px; }
 
-        .hero-content h1 {
-            font-size: 48px;
-            font-weight: 800;
-            letter-spacing: -1.5px;
-            line-height: 1.1;
-            margin-bottom: 20px;
-        }
-
-        .hero-content h1 span {
-            background: linear-gradient(135deg, var(--accent), #a855f7);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .hero-content p {
-            font-size: 18px;
-            color: var(--text-secondary);
-            max-width: 520px;
-            margin-bottom: 32px;
-        }
-
-        .hero-actions {
-            display: flex;
-            gap: 16px;
-            flex-wrap: wrap;
-        }
-
-        .hero-actions .btn-primary i {
-            margin-right: 8px;
-        }
-
-        .hero-visual {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-
+        .hero-visual { display: flex; justify-content: center; align-items: center; }
         .hero-visual .mockup {
-            width: 100%;
-            max-width: 520px;
-            border-radius: var(--radius);
-            background: var(--bg-card);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid var(--border);
-            box-shadow: var(--shadow-lg);
-            padding: 28px;
-            transition: transform var(--transition);
+            width: 100%; max-width: 520px; border-radius: var(--radius);
+            background: var(--bg-card); backdrop-filter: blur(14px) saturate(150%); -webkit-backdrop-filter: blur(14px) saturate(150%);
+            border: 1px solid var(--border); box-shadow: var(--shadow-lg); padding: 28px; transition: transform var(--transition);
         }
-
-        .hero-visual .mockup:hover {
-            transform: scale(1.01);
-        }
-
-        .mockup-header {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 20px;
-        }
-
-        .mockup-header span {
-            display: inline-block;
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            background: #f87171;
-        }
-
-        .mockup-header span:nth-child(2) {
-            background: #fbbf24;
-        }
-
-        .mockup-header span:nth-child(3) {
-            background: #34d399;
-        }
-
-        .mockup-content {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-
-        .mockup-line {
-            height: 12px;
-            background: var(--border);
-            border-radius: 6px;
-            width: 100%;
-        }
-
-        .mockup-line.short {
-            width: 60%;
-        }
-
-        .mockup-line.medium {
-            width: 80%;
-        }
-
-        .mockup-line.accent {
-            background: var(--accent);
-            opacity: 0.3;
-        }
-
-        .mockup-chart {
-            display: flex;
-            align-items: flex-end;
-            gap: 6px;
-            height: 60px;
-            margin: 16px 0 8px;
-        }
-
-        .mockup-chart .bar {
-            flex: 1;
-            background: var(--accent);
-            opacity: 0.5;
-            border-radius: 4px 4px 0 0;
-            height: calc(20% + 10% * var(--h, 1));
-        }
-
-        .mockup-chart .bar:nth-child(1) {
-            --h: 4;
-        }
-        .mockup-chart .bar:nth-child(2) {
-            --h: 2;
-        }
-        .mockup-chart .bar:nth-child(3) {
-            --h: 5;
-        }
-        .mockup-chart .bar:nth-child(4) {
-            --h: 3;
-        }
-        .mockup-chart .bar:nth-child(5) {
-            --h: 6;
-        }
-        .mockup-chart .bar:nth-child(6) {
-            --h: 4;
-        }
-        .mockup-chart .bar:nth-child(7) {
-            --h: 7;
-        }
-        .mockup-chart .bar:nth-child(8) {
-            --h: 5;
-        }
-        .mockup-chart .bar:nth-child(9) {
-            --h: 3;
-        }
-        .mockup-chart .bar:nth-child(10) {
-            --h: 6;
-        }
+        .hero-visual .mockup:hover { transform: scale(1.01); }
+        .mockup-header { display: flex; gap: 8px; margin-bottom: 20px; }
+        .mockup-header span { display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: #f87171; }
+        .mockup-header span:nth-child(2) { background: #fbbf24; }
+        .mockup-header span:nth-child(3) { background: #34d399; }
+        .mockup-content { display: flex; flex-direction: column; gap: 12px; }
+        .mockup-line { height: 12px; background: var(--border); border-radius: 6px; width: 100%; }
+        .mockup-line.short { width: 60%; }
+        .mockup-line.medium { width: 80%; }
+        .mockup-line.accent { background: linear-gradient(90deg, var(--cyan), var(--accent-strong)); opacity: 0.35; }
+        .mockup-chart { display: flex; align-items: flex-end; gap: 6px; height: 60px; margin: 16px 0 8px; }
+        .mockup-chart .bar { flex: 1; background: linear-gradient(180deg, var(--cyan), var(--accent-strong)); opacity: 0.55; border-radius: 4px 4px 0 0; height: calc(20% + 10% * var(--h, 1)); }
+        .mockup-chart .bar:nth-child(1) { --h: 4; } .mockup-chart .bar:nth-child(2) { --h: 2; }
+        .mockup-chart .bar:nth-child(3) { --h: 5; } .mockup-chart .bar:nth-child(4) { --h: 3; }
+        .mockup-chart .bar:nth-child(5) { --h: 6; } .mockup-chart .bar:nth-child(6) { --h: 4; }
+        .mockup-chart .bar:nth-child(7) { --h: 7; } .mockup-chart .bar:nth-child(8) { --h: 5; }
+        .mockup-chart .bar:nth-child(9) { --h: 3; } .mockup-chart .bar:nth-child(10) { --h: 6; }
 
         /* ===== Sections ===== */
-        .section-title {
-            font-size: 32px;
-            font-weight: 700;
-            letter-spacing: -0.5px;
-            margin-bottom: 12px;
-        }
+        .section-title { font-size: 32px; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 12px; }
+        .section-subtitle { font-size: 18px; color: var(--text-secondary); margin-bottom: 40px; }
+        .section-subtitle .en { display: inline; font-size: 0.82em; }
 
-        .section-subtitle {
-            font-size: 18px;
-            color: var(--text-secondary);
-            margin-bottom: 40px;
-        }
-
-        .features-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 24px;
-            margin: 40px 0 60px;
-        }
-
+        .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; margin: 40px 0 60px; }
         .feature-card {
-            background: var(--bg-card);
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            padding: 28px 24px;
-            box-shadow: var(--shadow);
-            transition: all var(--transition);
+            background: var(--bg-card); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+            border: 1px solid var(--border); border-radius: var(--radius); padding: 28px 24px;
+            box-shadow: var(--shadow); transition: all var(--transition);
         }
-
-        .feature-card:hover {
-            transform: translateY(-6px);
-            box-shadow: var(--shadow-lg);
-            border-color: var(--accent);
-        }
-
-        .feature-card .icon {
-            font-size: 32px;
-            color: var(--accent);
-            margin-bottom: 16px;
-            display: block;
-        }
-
-        .feature-card h3 {
-            font-size: 18px;
-            font-weight: 600;
-            margin-bottom: 8px;
-        }
-
-        .feature-card p {
-            font-size: 14px;
-            color: var(--text-secondary);
-        }
+        .feature-card:hover { transform: translateY(-6px); box-shadow: var(--shadow-lg); border-color: var(--accent); }
+        .feature-card .icon { font-size: 32px; margin-bottom: 16px; display: block;
+            background: linear-gradient(120deg, var(--cyan), var(--accent-strong), var(--orange));
+            -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+        .feature-card h3 { font-size: 18px; font-weight: 600; margin-bottom: 8px; }
+        .feature-card p { font-size: 14px; color: var(--text-secondary); }
+        .feature-card p .en { font-size: 0.86em; }
 
         /* ===== Tech Stack ===== */
-        .tech-stack {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 16px;
-            justify-content: center;
-            margin: 20px 0 40px;
-        }
-
+        .tech-stack { display: flex; flex-wrap: wrap; gap: 16px; justify-content: center; margin: 20px 0 40px; }
         .tech-badge {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 50px;
-            padding: 8px 20px;
-            font-size: 14px;
-            font-weight: 500;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            box-shadow: var(--shadow);
-            transition: all var(--transition);
+            background: var(--bg-card); border: 1px solid var(--border); border-radius: 50px;
+            padding: 8px 20px; font-size: 14px; font-weight: 500; display: inline-flex; align-items: center; gap: 8px;
+            box-shadow: var(--shadow); transition: all var(--transition);
         }
-
-        .tech-badge:hover {
-            transform: translateY(-2px);
-            border-color: var(--accent);
-        }
-
-        .tech-badge i {
-            color: var(--accent);
-        }
+        .tech-badge:hover { transform: translateY(-2px); border-color: var(--accent); }
+        .tech-badge i { color: var(--accent); }
 
         /* ===== Quick Start ===== */
-        .steps {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 24px;
-            margin: 32px 0 48px;
-        }
-
-        .step {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            padding: 24px;
-            text-align: center;
-            transition: all var(--transition);
-        }
-
-        .step:hover {
-            transform: translateY(-4px);
-            box-shadow: var(--shadow-lg);
-        }
-
-        .step .num {
-            display: inline-block;
-            width: 40px;
-            height: 40px;
-            background: var(--accent);
-            color: #fff;
-            border-radius: 50%;
-            line-height: 40px;
-            font-weight: 700;
-            font-size: 18px;
-            margin-bottom: 16px;
-        }
-
-        .step h4 {
-            font-weight: 600;
-            margin-bottom: 6px;
-        }
-
-        .step p {
-            font-size: 13px;
-            color: var(--text-secondary);
-        }
+        .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 24px; margin: 32px 0 48px; }
+        .step { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; text-align: center; transition: all var(--transition); }
+        .step:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); }
+        .step .num { display: inline-block; width: 40px; height: 40px; border-radius: 50%; line-height: 40px; font-weight: 700; font-size: 18px; margin-bottom: 16px; color: #fff; background: linear-gradient(120deg, var(--cyan), var(--accent-strong)); }
+        .step h4 { font-weight: 600; margin-bottom: 6px; }
+        .step h4 .inline-en { font-size: 0.72em; }
+        .step p { font-size: 13px; color: var(--text-secondary); }
+        .step code { font-family: 'SF Mono', 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; background: rgba(127,127,127,0.12); padding: 2px 6px; border-radius: 6px; word-break: break-all; }
 
         /* ===== CTA ===== */
-        .cta-section {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            padding: 48px 32px;
-            text-align: center;
-            margin: 40px 0;
-            box-shadow: var(--shadow-lg);
-        }
-
-        .cta-section h2 {
-            font-size: 28px;
-            font-weight: 700;
-            margin-bottom: 12px;
-        }
-
-        .cta-section p {
-            color: var(--text-secondary);
-            max-width: 500px;
-            margin: 0 auto 28px;
-        }
+        .cta-section { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 48px 32px; text-align: center; margin: 40px 0; box-shadow: var(--shadow-lg); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+        .cta-section h2 { font-size: 28px; font-weight: 700; margin-bottom: 12px; }
+        .cta-section h2 .inline-en { font-size: 0.6em; }
+        .cta-section p { color: var(--text-secondary); max-width: 540px; margin: 0 auto 28px; }
+        .cta-section p .en { display: inline; font-size: 0.86em; }
 
         /* ===== Footer ===== */
-        .footer {
-            border-top: 1px solid var(--border);
-            padding: 32px 0 16px;
-            display: flex;
-            justify-content: space-between;
-            flex-wrap: wrap;
-            gap: 20px;
-            font-size: 14px;
-            color: var(--text-muted);
-        }
-
-        .footer a {
-            color: var(--text-secondary);
-            text-decoration: none;
-            transition: color var(--transition);
-        }
-
-        .footer a:hover {
-            color: var(--accent);
-        }
-
-        .footer .socials {
-            display: flex;
-            gap: 16px;
-        }
-
-        .footer .socials a {
-            font-size: 18px;
-        }
+        .footer { border-top: 1px solid var(--border); padding: 32px 0 16px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 20px; font-size: 14px; color: var(--text-muted); }
+        .footer a { color: var(--text-secondary); text-decoration: none; transition: color var(--transition); }
+        .footer a:hover { color: var(--accent); }
+        .footer .socials { display: flex; gap: 16px; }
+        .footer .socials a { font-size: 18px; }
 
         /* ===== Responsive ===== */
         @media (max-width: 900px) {
-            .hero {
-                grid-template-columns: 1fr;
-                gap: 40px;
-                text-align: center;
-            }
-
-            .hero-content p {
-                margin-left: auto;
-                margin-right: auto;
-            }
-
-            .hero-actions {
-                justify-content: center;
-            }
-
-            .hero-visual .mockup {
-                max-width: 400px;
-                margin: 0 auto;
-            }
+            .hero { grid-template-columns: 1fr; gap: 40px; text-align: center; }
+            .hero-content p, .hero-content p .en { margin-left: auto; margin-right: auto; }
+            .hero-actions { justify-content: center; }
+            .hero-visual .mockup { max-width: 400px; margin: 0 auto; }
         }
-
         @media (max-width: 600px) {
-            body {
-                padding: 0 16px;
-            }
-            .container {
-                padding: 20px 0 40px;
-            }
-            .navbar {
-                flex-direction: column;
-                align-items: stretch;
-            }
-            .nav-links {
-                justify-content: center;
-                gap: 16px;
-            }
-            .hero-content h1 {
-                font-size: 32px;
-            }
-            .section-title {
-                font-size: 26px;
-            }
-            .steps {
-                grid-template-columns: 1fr;
-            }
-            .features-grid {
-                grid-template-columns: 1fr;
-            }
-            .cta-section {
-                padding: 32px 20px;
-            }
-            .footer {
-                flex-direction: column;
-                align-items: center;
-                text-align: center;
-            }
+            body { padding: 0 16px; }
+            .container { padding: 20px 0 40px; }
+            .navbar { flex-direction: column; align-items: stretch; }
+            .nav-links { justify-content: center; gap: 16px; }
+            .hero-content h1 { font-size: 32px; }
+            .section-title { font-size: 26px; }
+            .steps { grid-template-columns: 1fr; }
+            .features-grid { grid-template-columns: 1fr; }
+            .cta-section { padding: 32px 20px; }
+            .footer { flex-direction: column; align-items: center; text-align: center; }
         }
     </style>
 </head>
@@ -574,12 +285,12 @@
                 <span>NetSight Pro</span>
             </div>
             <div class="nav-links">
-                <a href="#features">特性</a>
-                <a href="#quickstart">快速部署</a>
-                <a href="https://github.com/BlueDriftHK/CF-workers-netdiag" target="_blank">GitHub</a>
-                <a href="https://github.com/BlueDriftHK/CF-workers-netdiag/blob/main/README.md" target="_blank">文档</a>
-                <a href="https://github.com/BlueDriftHK/CF-workers-netdiag/issues" target="_blank" class="btn-outline">
-                    <i class="fas fa-bug"></i> 反馈
+                <a href="#features">特性<span class="inline-en">Features</span></a>
+                <a href="#quickstart">部署<span class="inline-en">Deploy</span></a>
+                <a href="https://github.com/BlueDriftHK/CF-workers-netdiag" target="_blank" rel="noopener">GitHub</a>
+                <a href="https://github.com/BlueDriftHK/CF-workers-netdiag/blob/main/README.md" target="_blank" rel="noopener">文档<span class="inline-en">Docs</span></a>
+                <a href="https://github.com/BlueDriftHK/CF-workers-netdiag/issues" target="_blank" rel="noopener" class="btn-outline">
+                    <i class="fas fa-bug"></i> 反馈<span class="inline-en">Feedback</span>
                 </a>
             </div>
         </nav>
@@ -587,23 +298,23 @@
         <!-- ===== Hero ===== -->
         <section class="hero">
             <div class="hero-content">
-                <h1>网络诊断<br />如<span>极光</span>般绚丽高效</h1>
+                <h1>网络诊断<br />如<span class="grad">极光</span>般绚丽高效</h1>
+                <p class="hero-tagline">Aurora-grade network diagnostics, beautifully simple.</p>
                 <p>
-                    NetSight Pro 是一款部署在 Cloudflare Workers 上的全功能网络诊断工具，
-                    提供实时延迟监控、带宽测速、CPU 性能、WebSocket 延迟、TTFB 分析、WebRTC 泄漏检测等
-                    <strong>20+ 项诊断能力</strong>。
+                    NetSight Pro 是一款部署在 Cloudflare Workers 上的开源全功能网络诊断工具，提供实时延迟监控、带宽测速、CPU 性能、WebSocket 延迟、TTFB 分析、WebRTC 泄漏检测等 <strong>20+ 项诊断能力</strong>。
+                    <span class="en">NetSight Pro is an open-source, full-featured network diagnostic tool on Cloudflare Workers — 20+ capabilities including live latency, bandwidth, CPU, WebSocket, TTFB and WebRTC leak checks.</span>
                 </p>
                 <div class="hero-actions">
-                    <a href="https://github.com/BlueDriftHK/CF-workers-netdiag#-快速部署3-分钟" target="_blank" class="btn-primary">
+                    <a href="https://github.com/BlueDriftHK/CF-workers-netdiag#-快速部署3-分钟" target="_blank" rel="noopener" class="btn-primary">
                         <i class="fas fa-rocket"></i> 部署到 Cloudflare
                     </a>
-                    <a href="https://github.com/BlueDriftHK/CF-workers-netdiag" target="_blank" class="btn-outline" style="padding:10px 24px;">
-                        <i class="fab fa-github"></i> 查看源码
+                    <a href="https://github.com/BlueDriftHK/CF-workers-netdiag" target="_blank" rel="noopener" class="btn-outline" style="padding:10px 24px;">
+                        <i class="fab fa-github"></i> 查看源码 <span class="inline-en">Source</span>
                     </a>
                 </div>
             </div>
             <div class="hero-visual">
-                <div class="mockup">
+                <div class="mockup" aria-hidden="true">
                     <div class="mockup-header">
                         <span></span><span></span><span></span>
                     </div>
@@ -626,159 +337,159 @@
 
         <!-- ===== Features ===== -->
         <section id="features">
-            <h2 class="section-title">⚡ 特性一览</h2>
-            <p class="section-subtitle">一站式网络诊断，覆盖从链路质量到安全协议的全方位检测。</p>
+            <h2 class="section-title">⚡ 特性一览<span class="inline-en">Features</span></h2>
+            <p class="section-subtitle">一站式网络诊断，覆盖从链路质量到安全协议的全方位检测。<span class="en">One-stop diagnostics — from link quality to security protocols.</span></p>
 
             <div class="features-grid">
                 <div class="feature-card">
                     <span class="icon"><i class="fas fa-wave-square"></i></span>
-                    <h3>实时 RTT 监控</h3>
-                    <p>每 2 秒发送 HEAD 请求，绘制延迟趋势图，计算抖动、丢包率，自动评估连接质量。</p>
+                    <h3>实时 RTT 监控<span class="inline-en">Live RTT</span></h3>
+                    <p>每 2 秒发送 HEAD 探测，绘制延迟趋势图，计算抖动与丢包率，自动评估连接质量。<span class="en">2-second HEAD probes charting latency, jitter and packet loss.</span></p>
                 </div>
                 <div class="feature-card">
                     <span class="icon"><i class="fas fa-gauge-high"></i></span>
-                    <h3>带宽测速（下载/上传）</h3>
-                    <p>多档位下载和上传测试，计算平均速度，直观反映网络吞吐能力。</p>
+                    <h3>带宽测速<span class="inline-en">Speed Test</span></h3>
+                    <p>多档位下载与上传测试，计算平均速度，直观反映网络吞吐能力。<span class="en">Multi-tier download &amp; upload tests with average throughput.</span></p>
                 </div>
                 <div class="feature-card">
                     <span class="icon"><i class="fas fa-microchip"></i></span>
-                    <h3>CPU 基准测试</h3>
-                    <p>执行密集型数学运算，评估 Worker 或客户端设备的计算性能。</p>
+                    <h3>CPU 基准测试<span class="inline-en">CPU Benchmark</span></h3>
+                    <p>执行密集型数学运算，评估 Worker 或客户端设备的计算性能。<span class="en">Compute-bound benchmark for the Worker or the client device.</span></p>
                 </div>
                 <div class="feature-card">
                     <span class="icon"><i class="fas fa-bolt"></i></span>
-                    <h3>WebSocket 延迟</h3>
-                    <p>建立双向 WebSocket 连接，进行 ping/pong 测距，反映实时双向通信延迟。</p>
+                    <h3>WebSocket 延迟<span class="inline-en">WebSocket</span></h3>
+                    <p>建立双向 WebSocket 连接进行 ping/pong 测距，反映实时双向通信延迟。<span class="en">Bidirectional ping/pong round-trip over a live WebSocket.</span></p>
                 </div>
                 <div class="feature-card">
                     <span class="icon"><i class="fas fa-layer-group"></i></span>
-                    <h3>并发下载测试</h3>
-                    <p>模拟多路并发请求，检测网络在多连接场景下的吞吐表现。</p>
+                    <h3>并发下载测试<span class="inline-en">Concurrency</span></h3>
+                    <p>模拟多路并发请求，检测网络在多连接场景下的吞吐表现。<span class="en">Simulates parallel requests to probe multi-connection throughput.</span></p>
                 </div>
                 <div class="feature-card">
                     <span class="icon"><i class="fas fa-stream"></i></span>
-                    <h3>流式传输吞吐量</h3>
-                    <p>流式读取大文件（最大 10MB），测试长连接下的稳定传输速率。</p>
+                    <h3>流式传输吞吐量<span class="inline-en">Streaming</span></h3>
+                    <p>流式读取大文件（最大 10MB），测试长连接下的稳定传输速率。<span class="en">Streams large files (up to 10MB) to measure sustained transfer rate.</span></p>
                 </div>
                 <div class="feature-card">
                     <span class="icon"><i class="fas fa-stopwatch"></i></span>
-                    <h3>TTFB 分阶段分析</h3>
-                    <p>分解 DNS、TCP、TLS、等待、下载各阶段耗时，精确定位性能瓶颈。</p>
+                    <h3>TTFB 分阶段分析<span class="inline-en">TTFB Breakdown</span></h3>
+                    <p>分解 DNS、TCP、TLS、等待、下载各阶段耗时，精确定位性能瓶颈。<span class="en">Splits DNS, TCP, TLS, wait and download to pinpoint bottlenecks.</span></p>
                 </div>
                 <div class="feature-card">
                     <span class="icon"><i class="fas fa-shield-halved"></i></span>
-                    <h3>安全与协议检测</h3>
-                    <p>显示 TLS 版本、加密套件、HTTP/2/3 支持、ECH 状态、JA3/JA4 指纹、机器人评分。</p>
+                    <h3>安全与协议检测<span class="inline-en">Security &amp; Protocol</span></h3>
+                    <p>显示 TLS 版本、加密套件、HTTP/2/3 支持、ECH 状态、JA3/JA4 指纹、机器人评分。<span class="en">TLS version, cipher suites, HTTP/2/3, ECH, JA3/JA4 fingerprints and bot score.</span></p>
                 </div>
                 <div class="feature-card">
                     <span class="icon"><i class="fas fa-globe"></i></span>
-                    <h3>双栈 IP 与地理位置</h3>
-                    <p>同时获取 IPv4 和 IPv6，通过 ipapi.co 获取客户端真实地理位置及到边缘节点的距离。</p>
+                    <h3>双栈 IP 与地理位置<span class="inline-en">Dual-Stack Geo</span></h3>
+                    <p>同时获取 IPv4 与 IPv6，通过 ipapi.co 获取真实地理位置及到边缘节点的距离。<span class="en">Fetches IPv4 &amp; IPv6 and resolves real geolocation and edge distance via ipapi.co.</span></p>
                 </div>
                 <div class="feature-card">
                     <span class="icon"><i class="fas fa-user-secret"></i></span>
-                    <h3>IP 欺诈评分</h3>
-                    <p>集成 Scamalytics API，检测 IP 是否为代理/VPN/Tor/托管，并给出风险等级。</p>
+                    <h3>IP 风险评分<span class="inline-en">IP Risk Score</span></h3>
+                    <p>集成 ip-api.com，检测 IP 是否为代理 / 托管 / 移动网络，并给出派生风险等级。<span class="en">Uses ip-api.com to flag proxy / hosting / mobile IPs with a derived risk level.</span></p>
                 </div>
                 <div class="feature-card">
                     <span class="icon"><i class="fas fa-user-shield"></i></span>
-                    <h3>WebRTC 泄漏检测</h3>
-                    <p>检测本地和公网 IP 是否通过 WebRTC 泄露，保护隐私安全。</p>
+                    <h3>WebRTC 泄漏检测<span class="inline-en">WebRTC Leak</span></h3>
+                    <p>检测本地和公网 IP 是否通过 WebRTC 泄露，保护隐私安全。<span class="en">Detects local &amp; public IP exposure via WebRTC to protect privacy.</span></p>
                 </div>
                 <div class="feature-card">
                     <span class="icon"><i class="fas fa-play-circle"></i></span>
-                    <h3>流媒体连通性</h3>
-                    <p>检测 Netflix、Disney+、YouTube、ChatGPT 等服务的可达性。</p>
+                    <h3>流媒体连通性<span class="inline-en">Streaming Access</span></h3>
+                    <p>检测 Netflix、Disney+、YouTube、ChatGPT 等服务的可达性。<span class="en">Checks reachability of Netflix, Disney+, YouTube and ChatGPT.</span></p>
                 </div>
                 <div class="feature-card">
                     <span class="icon"><i class="fas fa-globe-asia"></i></span>
-                    <h3>多节点对比</h3>
-                    <p>输入其他 Worker 节点 URL，并行测试延迟，生成直观对比表格。</p>
+                    <h3>多节点对比<span class="inline-en">Multi-Node</span></h3>
+                    <p>输入其他 Worker 节点 URL，并行测试延迟，生成直观对比表格。<span class="en">Enter other Worker node URLs and compare latency in a side-by-side table.</span></p>
                 </div>
                 <div class="feature-card">
                     <span class="icon"><i class="fas fa-history"></i></span>
-                    <h3>测速历史与用量统计</h3>
-                    <p>存储最近测速记录，展示 API 端点调用统计（需 KV 支持）。</p>
+                    <h3>测速历史与用量统计<span class="inline-en">History &amp; Usage</span></h3>
+                    <p>存储最近测速记录，展示 API 端点调用统计（需 KV 支持）。<span class="en">Stores recent speed results and API usage stats (requires KV).</span></p>
                 </div>
                 <div class="feature-card">
                     <span class="icon"><i class="fas fa-copy"></i></span>
-                    <h3>一键生成诊断报告</h3>
-                    <p>复制纯文本报告，包含所有关键指标，便于分享和存档。</p>
+                    <h3>一键生成诊断报告<span class="inline-en">Report Export</span></h3>
+                    <p>复制纯文本报告，包含所有关键指标，便于分享和存档。<span class="en">Copy a plain-text report of all key metrics for sharing or archiving.</span></p>
                 </div>
                 <div class="feature-card">
                     <span class="icon"><i class="fas fa-language"></i></span>
-                    <h3>多语言与主题</h3>
-                    <p>支持 English、简体中文、繁體中文，深色/浅色/跟随系统主题，自动适配。</p>
+                    <h3>多语言与主题<span class="inline-en">i18n &amp; Theme</span></h3>
+                    <p>支持 English、简体中文、繁體中文，深色/浅色/跟随系统主题，自动适配。<span class="en">English, 简体中文, 繁體中文 — dark / light / system theme, auto-adaptive.</span></p>
                 </div>
             </div>
         </section>
 
         <!-- ===== Tech Stack ===== -->
         <section>
-            <h2 class="section-title">🛠️ 技术栈</h2>
+            <h2 class="section-title">🛠️ 技术栈<span class="inline-en">Tech Stack</span></h2>
             <div class="tech-stack">
                 <span class="tech-badge"><i class="fab fa-cloudflare"></i> Cloudflare Workers</span>
                 <span class="tech-badge"><i class="fas fa-code"></i> JavaScript (ES2020)</span>
-                <span class="tech-badge"><i class="fas fa-database"></i> KV (可选)</span>
+                <span class="tech-badge"><i class="fas fa-database"></i> KV (可选 / Optional)</span>
                 <span class="tech-badge"><i class="fab fa-html5"></i> HTML5 + CSS3</span>
-                <span class="tech-badge"><i class="fas fa-paint-brush"></i> 毛玻璃设计</span>
-                <span class="tech-badge"><i class="fas fa-chart-line"></i> Canvas 图表</span>
+                <span class="tech-badge"><i class="fas fa-paint-brush"></i> 毛玻璃 / Glassmorphism</span>
+                <span class="tech-badge"><i class="fas fa-chart-line"></i> Canvas 图表 / Charts</span>
                 <span class="tech-badge"><i class="fas fa-plug"></i> WebSocket</span>
-                <span class="tech-badge"><i class="fas fa-shield-alt"></i> 安全头 + CSP</span>
+                <span class="tech-badge"><i class="fas fa-shield-alt"></i> 安全头 + CSP / Hardening</span>
             </div>
         </section>
 
         <!-- ===== Quick Start ===== -->
         <section id="quickstart">
-            <h2 class="section-title">🚀 快速部署</h2>
-            <p class="section-subtitle">3 分钟即可拥有自己的网络诊断服务。</p>
+            <h2 class="section-title">🚀 快速部署<span class="inline-en">Quick Start</span></h2>
+            <p class="section-subtitle">3 分钟即可拥有自己的网络诊断服务。<span class="en">Spin up your own diagnostic service in about 3 minutes.</span></p>
 
             <div class="steps">
                 <div class="step">
                     <div class="num">1</div>
-                    <h4>克隆仓库</h4>
+                    <h4>克隆仓库<span class="inline-en">Clone</span></h4>
                     <p><code>git clone https://github.com/BlueDriftHK/CF-workers-netdiag.git</code></p>
                 </div>
                 <div class="step">
                     <div class="num">2</div>
-                    <h4>安装 Wrangler</h4>
+                    <h4>安装 Wrangler<span class="inline-en">Install</span></h4>
                     <p><code>npm install -g wrangler</code></p>
                 </div>
                 <div class="step">
                     <div class="num">3</div>
-                    <h4>配置 KV（可选）</h4>
-                    <p><code>wrangler kv:namespace create "SPEED_HISTORY"</code></p>
+                    <h4>配置 KV（可选）<span class="inline-en">KV (optional)</span></h4>
+                    <p><code>wrangler kv namespace create "SPEED_HISTORY"</code></p>
                 </div>
                 <div class="step">
                     <div class="num">4</div>
-                    <h4>发布</h4>
-                    <p><code>wrangler publish</code></p>
+                    <h4>发布<span class="inline-en">Deploy</span></h4>
+                    <p><code>wrangler deploy</code></p>
                 </div>
             </div>
 
             <div style="text-align: center;">
-                <a href="https://github.com/BlueDriftHK/CF-workers-netdiag#-详细部署步骤" target="_blank" class="btn-primary">
-                    <i class="fas fa-book"></i> 查看完整部署指南
+                <a href="https://github.com/BlueDriftHK/CF-workers-netdiag#-详细部署步骤" target="_blank" rel="noopener" class="btn-primary">
+                    <i class="fas fa-book"></i> 查看完整部署指南 <span class="inline-en">Full Guide</span>
                 </a>
             </div>
         </section>
 
         <!-- ===== CTA ===== -->
         <div class="cta-section">
-            <h2>❤️ 加入社区</h2>
+            <h2>❤️ 加入社区<span class="inline-en">Join the Community</span></h2>
             <p>
-                NetSight Pro 是开源项目，欢迎贡献代码、报告问题或提出建议。
-                让我们一起让网络诊断变得更简单、更强大。
+                NetSight Pro 是开源项目，欢迎贡献代码、报告问题或提出建议。让我们一起让网络诊断变得更简单、更强大。
+                <span class="en">NetSight Pro is open source — contributions, issues and ideas are welcome.</span>
             </p>
             <div style="display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;">
-                <a href="https://github.com/BlueDriftHK/CF-workers-netdiag" target="_blank" class="btn-primary">
+                <a href="https://github.com/BlueDriftHK/CF-workers-netdiag" target="_blank" rel="noopener" class="btn-primary">
                     <i class="fab fa-github"></i> 访问 GitHub
                 </a>
-                <a href="https://github.com/BlueDriftHK/CF-workers-netdiag/issues" target="_blank" class="btn-outline" style="padding:10px 24px;">
+                <a href="https://github.com/BlueDriftHK/CF-workers-netdiag/issues" target="_blank" rel="noopener" class="btn-outline" style="padding:10px 24px;">
                     <i class="fas fa-comment"></i> 提 Issue
                 </a>
-                <a href="https://github.com/BlueDriftHK/CF-workers-netdiag/blob/main/CONTRIBUTING.md" target="_blank" class="btn-outline" style="padding:10px 24px;">
-                    <i class="fas fa-code-branch"></i> 贡献指南
+                <a href="https://github.com/BlueDriftHK/CF-workers-netdiag/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener" class="btn-outline" style="padding:10px 24px;">
+                    <i class="fas fa-code-branch"></i> 贡献指南 <span class="inline-en">Contribute</span>
                 </a>
             </div>
         </div>
@@ -786,19 +497,14 @@
         <!-- ===== Footer ===== -->
         <footer class="footer">
             <span>
-                &copy; 2026 <a href="https://github.com/BlueDriftHK">BlueDriftHK</a>
-                &middot; 基于 <a href="https://opensource.org/licenses/MIT">MIT</a> 许可证
+                &copy; 2026 <a href="https://github.com/BlueDriftHK" target="_blank" rel="noopener">BlueDriftHK</a>
+                &middot; 基于 <a href="https://www.gnu.org/licenses/agpl-3.0.en.html" target="_blank" rel="noopener">AGPL-3.0</a> 许可证
+                <span class="inline-en">Licensed under AGPL-3.0</span>
             </span>
             <div class="socials">
-                <a href="https://github.com/BlueDriftHK/CF-workers-netdiag" target="_blank" aria-label="GitHub">
-                    <i class="fab fa-github"></i>
-                </a>
-                <a href="https://github.com/BlueDriftHK/CF-workers-netdiag/issues" target="_blank" aria-label="Issues">
-                    <i class="fas fa-bug"></i>
-                </a>
-                <a href="https://github.com/BlueDriftHK/CF-workers-netdiag/blob/main/SECURITY.md" target="_blank" aria-label="Security">
-                    <i class="fas fa-shield-alt"></i>
-                </a>
+                <a href="https://github.com/BlueDriftHK/CF-workers-netdiag" target="_blank" rel="noopener" aria-label="GitHub"><i class="fab fa-github"></i></a>
+                <a href="https://github.com/BlueDriftHK/CF-workers-netdiag/issues" target="_blank" rel="noopener" aria-label="Issues"><i class="fas fa-bug"></i></a>
+                <a href="https://github.com/BlueDriftHK/CF-workers-netdiag/blob/main/SECURITY.md" target="_blank" rel="noopener" aria-label="Security"><i class="fas fa-shield-alt"></i></a>
             </div>
         </footer>
 
