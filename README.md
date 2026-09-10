@@ -460,7 +460,7 @@ A：拉取仓库最新代码，重新部署即可。若使用 Wrangler，`wrangl
 
 ## 📄 许可证与贡献
 
-本项目基于 **MIT 许可证** 开源，欢迎任何形式的贡献（Issue、PR、Star）。
+本项目基于 **AGPL-3.0 许可证** 开源，欢迎任何形式的贡献（Issue、PR、Star）。
 
 - **作者**：[BlueDriftHK](https://github.com/BlueDriftHK)
 - **项目仓库**：[https://github.com/BlueDriftHK/CF-workers-netdiag](https://github.com/BlueDriftHK/CF-workers-netdiag)
